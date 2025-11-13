@@ -172,6 +172,8 @@ class DeformableFeatureAggregation(nn.Module):
         # Aggregate features
         if self.use_deformable_func:
             # Use CUDA deformable aggregation function
+            if kwargs.get('verbose', False):
+                print("  → Using CUDA deformable aggregation (DAF)")
             points_2d = (
                 self.project_points(
                     key_points,
@@ -198,6 +200,8 @@ class DeformableFeatureAggregation(nn.Module):
             )
         else:
             # Use PyTorch grid_sample
+            if kwargs.get('verbose', False):
+                print("  → Using PyTorch grid_sample fallback")
             features = self.feature_sampling(
                 feature_maps,
                 key_points,
@@ -357,6 +361,12 @@ class DeformableFeatureAggregation(nn.Module):
 def test_deformable_feature_aggregation():
     """Test DeformableFeatureAggregation implementation."""
     print("Testing DeformableFeatureAggregation...")
+    print(f"\nCUDA Extension Status:")
+    print(f"  - CUDA extension available: {DAF_AVAILABLE}")
+    if DAF_AVAILABLE:
+        print(f"  - Using: CUDA deformable aggregation (fast)")
+    else:
+        print(f"  - Using: PyTorch grid_sample fallback (compatible)")
 
     # Test 1: Basic forward pass without camera embed
     print("\n1. Testing basic forward pass...")
@@ -400,7 +410,7 @@ def test_deformable_feature_aggregation():
         'image_wh': torch.tensor([[800, 450]] * num_cams).unsqueeze(0).repeat(batch_size, 1, 1).float()
     }
 
-    output = model(instance_feature, anchor, anchor_embed, feature_maps, metas)
+    output = model(instance_feature, anchor, anchor_embed, feature_maps, metas, verbose=True)
 
     print(f"   Input shape: {instance_feature.shape}")
     print(f"   Output shape: {output.shape}")
@@ -423,7 +433,7 @@ def test_deformable_feature_aggregation():
         )
     )
 
-    output_cam = model_cam(instance_feature, anchor, anchor_embed, feature_maps, metas)
+    output_cam = model_cam(instance_feature, anchor, anchor_embed, feature_maps, metas, verbose=True)
     print(f"   Output shape with camera embed: {output_cam.shape}")
     assert output_cam.shape == (batch_size, num_anchor, embed_dims)
     print("   ✓ Camera embeddings work")
@@ -443,7 +453,7 @@ def test_deformable_feature_aggregation():
         )
     )
 
-    output_cat = model_cat(instance_feature, anchor, anchor_embed, feature_maps, metas)
+    output_cat = model_cat(instance_feature, anchor, anchor_embed, feature_maps, metas, verbose=True)
     print(f"   Output shape with cat residual: {output_cat.shape}")
     assert output_cat.shape == (batch_size, num_anchor, embed_dims * 2)
     print("   ✓ Concatenation residual works")
