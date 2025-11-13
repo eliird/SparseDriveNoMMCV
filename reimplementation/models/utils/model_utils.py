@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 
 
-def constant_init(module, val, bias=0):
+def constant_init(module, val, bias=0.0):
     """Initialize module with constant value.
 
     Args:
@@ -36,7 +36,7 @@ def kaiming_init(module, mode='fan_out', nonlinearity='relu', bias=0):
         nn.init.constant_(module.bias, bias)
 
 
-def xavier_init(module, gain=1, bias=0, distribution='normal'):
+def xavier_init(module, gain=1.0, bias=0.0, distribution='normal'):
     """Xavier initialization.
 
     Args:

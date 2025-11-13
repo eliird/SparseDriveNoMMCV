@@ -7,6 +7,7 @@ from .instance_bank import InstanceBank
 from .sparse_box_3d_encoder import SparseBox3DEncoder
 from .attention import MultiheadFlashAttention, gen_sineembed_for_position
 from .asym_ffn import AsymmetricFFN
+from .box3d import *
 
 __all__ = [
     'ConvModule',
