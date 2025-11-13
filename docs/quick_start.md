@@ -1,5 +1,10 @@
 # Quick Start
 
+### docker
+```sh
+docker build -t sparsedrive:latest .
+docker run --gpus all -it -v $(pwd):/workspace sparsedrive:latest
+```
 ### Set up a new virtual environment
 ```bash
 conda create -n sparsedrive python=3.8 -y
