@@ -6,22 +6,52 @@
 
 ---
 
-## Models to Implement (in config order)
+## ✅ Completed Components
 
-### 1. Main Model (line 89)
-- [ ] **SparseDrive**
+### Core Infrastructure
+- [x] **Utility Functions** - `models/utils/model_utils.py`
+  - constant_init, kaiming_init, xavier_init, normal_init, load_checkpoint
 
-### 2. Backbone (line 93)
-- [ ] **ResNet** - Use torchvision.models.resnet50
+- [x] **ConvModule** - `models/common/conv_module.py`
+  - Simplified Conv2d + BatchNorm + Activation wrapper
+  - Replaces mmcv.cnn.ConvModule
 
-### 3. Neck (line 105)
-- [ ] **FPN** - Feature Pyramid Network
+### Main Components
 
-### 4. Depth Branch (line 114)
-- [ ] **DenseDepthNet**
+- [x] **SparseDrive** (partial) - `models/sparse_drive.py`
+  - Main model class with config-based building
+  - Integrates backbone, neck, and depth branch
+  - ✅ Backbone integration working
+  - ✅ Neck integration working
+  - ✅ Depth branch integration working
+  - ⏳ Task head integration pending
+
+- [x] **ResNet** - `models/backbones/resnet.py`
+  - Pure PyTorch ResNet18/34/50/101/152
+  - Removed mmengine dependencies
+  - Test: `python -m reimplementation.models.backbones.resnet`
+
+- [x] **FPN** - `models/necks/fpn.py`
+  - Feature Pyramid Network
+  - Uses simplified ConvModule
+  - Test: `python -m reimplementation.models.necks.fpn`
+
+- [x] **DenseDepthNet** - `models/depth/dense_depth.py`
+  - Dense depth estimation for auxiliary supervision
+  - Fixed tensor dimension handling for FPN features
+  - Test: `python -m reimplementation.models.depth.dense_depth`
+
+**Integration Test:** `python -m reimplementation.models.sparse_drive`
+- ✅ Backbone → Neck → Depth pipeline working
+- ✅ Training mode with depth loss working
+- ✅ Inference mode with depth predictions working
+
+---
+
+## 🚧 In Progress
 
 ### 5. Unified Head (line 120)
-- [ ] **SparseDriveHead**
+- [ ] **SparseDriveHead** - Next to implement
 
 ---
 
@@ -202,13 +232,51 @@ We'll implement in dependency order, starting with the simplest:
 
 ---
 
-## Next Step
+## 📊 Progress Summary
 
-Tell me which model to start with and I'll:
-1. Find the original implementation
-2. Copy it with minimal changes
-3. Remove mmcv/mmdet dependencies
-4. Add tests
-5. Mark as complete
+**Completed:** 5 components
+- ✅ ResNet (backbone)
+- ✅ FPN (neck)
+- ✅ DenseDepthNet (depth branch)
+- ✅ ConvModule (common utility)
+- ✅ Model utilities (init functions, checkpoint loading)
 
-**Recommended start:** `FocalLoss` or `SparseBox3DEncoder` (both simple and independent)
+**Next Priority:** Task heads and their dependencies
+1. Start with simple components: Losses, Encoders
+2. Build up to Instance Bank
+3. Implement Sparse4DHead
+4. Implement SparseDriveHead to unify everything
+
+**Files Created:**
+```
+reimplementation/
+├── models/
+│   ├── __init__.py
+│   ├── sparse_drive.py           ✅ Main model (partial)
+│   ├── backbones/
+│   │   ├── __init__.py
+│   │   └── resnet.py             ✅ ResNet backbone
+│   ├── necks/
+│   │   ├── __init__.py
+│   │   └── fpn.py                ✅ FPN neck
+│   ├── depth/
+│   │   ├── __init__.py
+│   │   └── dense_depth.py        ✅ Depth estimation
+│   ├── common/
+│   │   ├── __init__.py
+│   │   └── conv_module.py        ✅ Simplified ConvModule
+│   └── utils/
+│       ├── __init__.py
+│       └── model_utils.py        ✅ Initialization & checkpoint utils
+```
+
+---
+
+## 🎯 Next Steps
+
+**Recommended order:**
+1. **InstanceBank** - Core component for detection/map heads (I see you opened this file!)
+2. **Simple Losses** - FocalLoss, L1Loss (no dependencies)
+3. **Encoders** - SparseBox3DEncoder, SparsePoint3DEncoder
+4. **Sparse4DHead** - Detection head
+5. **SparseDriveHead** - Unified head wrapper

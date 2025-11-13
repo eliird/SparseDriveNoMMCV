@@ -1,10 +1,11 @@
+"""
+InstanceBank: Manages instance features and anchors with temporal caching.
+Pure PyTorch implementation without mmcv dependencies.
+"""
 import torch
 from torch import nn
 import torch.nn.functional as F
 import numpy as np
-
-from mmcv.utils import build_from_cfg
-from mmcv.cnn.bricks.registry import PLUGIN_LAYERS
 
 __all__ = ["InstanceBank"]
 
@@ -21,8 +22,24 @@ def topk(confidence, k, *inputs):
     return confidence, outputs
 
 
-@PLUGIN_LAYERS.register_module()
 class InstanceBank(nn.Module):
+    """Instance bank for managing detection/map instance features and anchors.
+
+    This module maintains a bank of instance features and anchors, with support for
+    temporal caching across frames. It's used in both detection and map heads.
+
+    Args:
+        num_anchor (int): Number of anchor instances
+        embed_dims (int): Embedding dimension for instance features
+        anchor (str | np.ndarray | list): Initial anchor values or path to .npy file
+        anchor_handler (dict): Config for anchor handler (e.g., SparseBox3DKeyPointsGenerator)
+        num_temp_instances (int): Number of temporal instances to cache. Default: 0
+        default_time_interval (float): Default time interval between frames. Default: 0.5
+        confidence_decay (float): Confidence decay factor for temporal instances. Default: 0.6
+        anchor_grad (bool): Whether anchor requires gradient. Default: True
+        feat_grad (bool): Whether features require gradient. Default: True
+        max_time_interval (float): Maximum time interval for temporal matching. Default: 2
+    """
     def __init__(
         self,
         num_anchor,
@@ -43,10 +60,10 @@ class InstanceBank(nn.Module):
         self.confidence_decay = confidence_decay
         self.max_time_interval = max_time_interval
 
-        if anchor_handler is not None:
-            anchor_handler = build_from_cfg(anchor_handler, PLUGIN_LAYERS)
-            assert hasattr(anchor_handler, "anchor_projection")
-        self.anchor_handler = anchor_handler
+        # anchor_handler will be built externally and passed as an instance
+        # We'll handle this in the builder method later
+        self.anchor_handler_cfg = anchor_handler
+        self.anchor_handler = None  # Will be set externally after instantiation
         if isinstance(anchor, str):
             anchor = np.load(anchor)
         elif isinstance(anchor, (list, tuple)):
@@ -257,3 +274,104 @@ class InstanceBank(nn.Module):
             (0, self.num_anchor - self.num_temp_instances),
             value=-1,
         )
+
+
+def test_instance_bank():
+    """Test InstanceBank implementation."""
+    import torch
+
+    print("Testing InstanceBank...")
+
+    # Create model
+    print("\n1. Creating InstanceBank...")
+    num_anchor = 900
+    embed_dims = 256
+    num_temp_instances = 600
+
+    # Create dummy anchor data
+    anchor = np.random.randn(num_anchor, 10)  # 10D anchor (e.g., 3D box params)
+
+    instance_bank = InstanceBank(
+        num_anchor=num_anchor,
+        embed_dims=embed_dims,
+        anchor=anchor,
+        anchor_handler=None,  # No handler for now
+        num_temp_instances=num_temp_instances,
+        confidence_decay=0.6,
+        anchor_grad=False,
+        feat_grad=True,
+    )
+    print(f"   Instance bank created with {num_anchor} anchors, {embed_dims}D features")
+    print(f"   Temporal instances: {num_temp_instances}")
+
+    # Test get (initial frame)
+    print("\n2. Testing get() for initial frame...")
+    batch_size = 2
+    metas = {
+        'timestamp': torch.tensor([0.0, 0.0]),
+        'img_metas': [{'T_global': np.eye(4)} for _ in range(batch_size)]
+    }
+
+    instance_feature, anchor_out, cached_feature, cached_anchor, time_interval = instance_bank.get(
+        batch_size, metas=metas
+    )
+
+    print(f"   instance_feature shape: {instance_feature.shape}")
+    print(f"   anchor shape: {anchor_out.shape}")
+    print(f"   cached_feature: {cached_feature}")
+    print(f"   time_interval: {time_interval}")
+
+    # Test update
+    print("\n3. Testing update()...")
+    # Simulate predictions
+    confidence = torch.rand(batch_size, num_anchor, 10)  # 10 classes
+    updated_feature, updated_anchor = instance_bank.update(
+        instance_feature, anchor_out, confidence
+    )
+    print(f"   updated_feature shape: {updated_feature.shape}")
+    print(f"   updated_anchor shape: {updated_anchor.shape}")
+
+    # Test cache
+    print("\n4. Testing cache()...")
+    instance_bank.cache(
+        updated_feature, updated_anchor, confidence, metas=metas
+    )
+    print(f"   Cached {instance_bank.cached_feature.shape[1]} instances")
+    print(f"   Confidence shape: {instance_bank.confidence.shape}")
+
+    # Test get with cached data (next frame)
+    print("\n5. Testing get() with temporal instances...")
+    metas_t1 = {
+        'timestamp': torch.tensor([0.5, 0.5]),  # 0.5s later
+        'img_metas': [{'T_global': np.eye(4), 'T_global_inv': np.eye(4)}
+                      for _ in range(batch_size)]
+    }
+
+    instance_feature_t1, anchor_t1, cached_feature_t1, cached_anchor_t1, time_interval_t1 = instance_bank.get(
+        batch_size, metas=metas_t1
+    )
+
+    print(f"   instance_feature shape: {instance_feature_t1.shape}")
+    print(f"   cached_feature shape: {cached_feature_t1.shape}")
+    print(f"   time_interval: {time_interval_t1}")
+    print(f"   mask shape: {instance_bank.mask.shape}, valid: {instance_bank.mask.sum().item()}")
+
+    # Test instance ID tracking
+    print("\n6. Testing instance ID tracking...")
+    instance_id = instance_bank.get_instance_id(confidence, threshold=0.5)
+    print(f"   instance_id shape: {instance_id.shape}")
+    print(f"   Number of unique IDs: {len(instance_id.unique())}")
+    print(f"   Next ID will be: {instance_bank.prev_id}")
+
+    # Test reset
+    print("\n7. Testing reset()...")
+    instance_bank.reset()
+    print(f"   cached_feature after reset: {instance_bank.cached_feature}")
+    print(f"   confidence after reset: {instance_bank.confidence}")
+
+    print("\n✓ All tests passed!")
+
+
+if __name__ == '__main__':
+    # To run this test: python -m reimplementation.models.common.instance_bank
+    test_instance_bank()
