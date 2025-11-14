@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 
-import mmcv
+from reimplementation.data.data_utils import load
 
 CLASSES = [
     "car",
@@ -42,7 +42,7 @@ K = 6
 DIS_THRESH = 55
 
 fp = 'data/infos/nuscenes_infos_train.pkl'
-data = mmcv.load(fp)
+data = load(fp)
 data_infos = list(sorted(data["infos"], key=lambda e: e["timestamp"]))
 intention = dict()
 for i in range(len(CLASSES)):
