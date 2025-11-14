@@ -1,4 +1,41 @@
-# SparseDrive: End-to-End Autonomous Driving via Sparse Scene Representation
+You can take a look at the original README below this section this explains how to setup and run
+
+# How to run? 
+
+
+## Clone the repo
+```sh
+git clone https://github.com/eliird/SparseDriveNoMMCV
+
+# prepare a new environment with pytorch installed
+
+cd reimplementation/ops
+python setup.py install
+cd ../../
+
+pip install -r requirements.txt
+```
+## Download and extract dataset
+
+Edit the download bath in the scripts below to the folder of your selection
+
+```bash
+bash download_nuscnes.sh
+bash eextract_nuscenes.sh
+
+# create a symbolic to have data present in the directory
+ln -s path/to/nuscenes ./data/nuscenes
+
+# preprocess the dataset 
+bash scripts/create_data.sh
+```
+
+## Run the Training Script
+
+```sh
+```
+
+# Original README: SparseDrive: End-to-End Autonomous Driving via Sparse Scene Representation
 
 https://github.com/swc-17/SparseDrive/assets/64842878/867276dc-7c19-4e01-9a8e-81c4ed844745
 
