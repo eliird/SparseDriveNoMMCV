@@ -313,7 +313,8 @@ class MultiScaleDepthMapGenerator(object):
                 depth_map[v, u] = depths
                 gt_depth[j].append(depth_map)
 
-        input_dict["gt_depth"] = [np.stack(x) for x in gt_depth]
+        # Convert to tensors (list of tensors, one per scale)
+        input_dict["gt_depth"] = [torch.from_numpy(np.stack(x)).float() for x in gt_depth]
         return input_dict
     
 

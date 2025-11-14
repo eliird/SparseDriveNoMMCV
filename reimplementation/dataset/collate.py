@@ -58,20 +58,16 @@ def sparse_drive_collate(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
 
         # Special handling for gt_depth (list of scales, need to transpose)
         if key == 'gt_depth' and all(isinstance(v, list) for v in values):
-            # gt_depth is a list of tensors (one per scale)
-            # Each sample: [scale0, scale1, scale2, ...]
+            # gt_depth is a list of tensors (one per scale) from the dataset
+            # Each sample: [scale0_tensor, scale1_tensor, scale2_tensor, ...]
             # We need to transpose to: [batch_scale0, batch_scale1, batch_scale2, ...]
             try:
                 num_scales = len(values[0])
                 transposed = []
                 for scale_idx in range(num_scales):
                     scale_tensors = [v[scale_idx] for v in values]
-                    # Stack tensors for this scale
-                    if all(isinstance(t, torch.Tensor) for t in scale_tensors):
-                        transposed.append(torch.stack(scale_tensors, dim=0))
-                    else:
-                        # Convert numpy arrays to tensors first
-                        transposed.append(torch.stack([torch.as_tensor(t) for t in scale_tensors], dim=0))
+                    # All should already be tensors from the dataset
+                    transposed.append(torch.stack(scale_tensors, dim=0))
                 collated[key] = transposed
                 continue
             except Exception as e:
