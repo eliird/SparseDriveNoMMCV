@@ -104,7 +104,9 @@
   - Test: `python -m reimplementation.models.common.target`
 
 ### 5.9 Losses (lines 251, 258)
-- [ ] **FocalLoss** (line 251)
+- [x] **FocalLoss** (line 251)
+  - CUDA extension with PyTorch fallback
+  - Test: `python -m reimplementation.models.losses.focal_loss`
 - [ ] **SparseBox3DLoss** (line 258)
   - [ ] **L1Loss** (line 259)
   - [ ] **CrossEntropyLoss** (line 260)
@@ -254,12 +256,12 @@ We'll implement in dependency order, starting with the simplest:
 
 ## 📊 Progress Summary
 
-**Completed:** 12 components
+**Completed:** 13 components
 - ✅ ResNet (backbone)
 - ✅ FPN (neck)
 - ✅ DenseDepthNet (depth branch)
 - ✅ ConvModule (common utility)
-- ✅ Model utilities (init functions, checkpoint loading, Scale)
+- ✅ Model utilities (init functions, checkpoint loading, Scale, bias_init_with_prob)
 - ✅ SparseBox3DEncoder (box encoding)
 - ✅ MultiheadFlashAttention (graph attention)
 - ✅ AsymmetricFFN (feedforward network)
@@ -267,6 +269,7 @@ We'll implement in dependency order, starting with the simplest:
 - ✅ SparseBox3DKeyPointsGenerator (3D keypoint generation)
 - ✅ SparseBox3DRefinementModule (box refinement)
 - ✅ SparseBox3DTarget (Hungarian matching & denoising)
+- ✅ FocalLoss (CUDA extension with PyTorch fallback)
 
 **Next Priority:** Task heads and their dependencies
 1. Start with simple components: Losses, Encoders
@@ -298,6 +301,9 @@ reimplementation/
 │   │   ├── sparse_3d_refinement.py               ✅ Box refinement
 │   │   ├── target.py                             ✅ Target assignment
 │   │   └── box3d.py                              ✅ Box utilities
+│   ├── losses/
+│   │   ├── __init__.py
+│   │   └── focal_loss.py                         ✅ Focal loss (CUDA + fallback)
 │   ├── deformable/
 │   │   ├── __init__.py
 │   │   ├── deformable_feature_aggregation.py     ✅ Multi-view aggregation
@@ -308,12 +314,17 @@ reimplementation/
 ├── ops/
 │   ├── __init__.py                               ✅ CUDA extension API
 │   ├── deformable_aggregation.py                ✅ Custom autograd function
-│   ├── setup.py                                 ✅ Build script
+│   ├── signmoid_focal_loss.py                   ✅ Focal loss autograd function
+│   ├── setup.py                                 ✅ Build script (both extensions)
 │   ├── README.md                                ✅ Documentation
 │   ├── INTEGRATION.md                           ✅ Integration guide
 │   └── src/
 │       ├── deformable_aggregation.cpp           ✅ C++ bindings
-│       └── deformable_aggregation_cuda.cu       ✅ CUDA kernels
+│       ├── deformable_aggregation_cuda.cu       ✅ CUDA kernels
+│       ├── sigmoid_focal_loss.cpp               ✅ Focal loss C++ bindings
+│       ├── sigmoid_focal_loss_cuda.cu           ✅ Focal loss CUDA kernels
+│       ├── sigmoid_focal_loss_cuda_kernel.cuh   ✅ Focal loss CUDA kernel headers
+│       └── pytorch_cuda_helper.hpp              ✅ CUDA helper macros
 ```
 
 ---
@@ -321,8 +332,14 @@ reimplementation/
 ## 🎯 Next Steps
 
 **Recommended order:**
-1. **InstanceBank** - Core component for detection/map heads (I see you opened this file!)
-2. **Simple Losses** - FocalLoss, L1Loss (no dependencies)
-3. **Encoders** - SparseBox3DEncoder, SparsePoint3DEncoder
+1. **Simple Losses** - L1Loss, CrossEntropyLoss, GaussianFocalLoss (no dependencies)
+2. **InstanceBank** - Core component for detection/map heads
+3. **Encoders** - SparsePoint3DEncoder (for map head)
 4. **Sparse4DHead** - Detection head
 5. **SparseDriveHead** - Unified head wrapper
+
+**To compile CUDA extensions:**
+```bash
+cd reimplementation/ops
+python setup.py install
+```
