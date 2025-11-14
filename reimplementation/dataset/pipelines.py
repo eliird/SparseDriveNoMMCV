@@ -285,9 +285,15 @@ class MultiScaleDepthMapGenerator(object):
                 np.squeeze(lidar2img[:3, :3] @ points, axis=-1)
                 + lidar2img[:3, 3]
             )
-            pts_2d[:, :2] /= pts_2d[:, 2:3]
-            U = np.round(pts_2d[:, 0]).astype(np.int32)
-            V = np.round(pts_2d[:, 1]).astype(np.int32)
+            # Avoid division by zero/small values
+            valid_depth_mask = pts_2d[:, 2] > 0.1
+            pts_2d[:, :2] = np.where(
+                valid_depth_mask[:, None],
+                pts_2d[:, :2] / pts_2d[:, 2:3],
+                0.0  # Set invalid points to 0
+            )
+            U = np.round(np.clip(pts_2d[:, 0], -1e6, 1e6)).astype(np.int32)
+            V = np.round(np.clip(pts_2d[:, 1], -1e6, 1e6)).astype(np.int32)
             depths = pts_2d[:, 2]
             mask = np.logical_and.reduce(
                 [

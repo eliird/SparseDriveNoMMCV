@@ -1,5 +1,3 @@
-cenes_download.sh
-
 # List of files to download
 URLS=(
  #V1.0
@@ -24,8 +22,8 @@ https://d36yt3mvayqw5m.cloudfront.net/public/v1.0/nuScenes-map-expansion-v1.3.zi
 )
 
 # Create target directory
-mkdir -p /data1/work/irdali.durrani/nuscenes_data
-cd /data1/work/irdali.durrani/nuscenes_data
+mkdir -p ./data
+cd ./data
 
 # Download each file with progress bar
 for url in "${URLS[@]}"; do
@@ -33,4 +31,4 @@ for url in "${URLS[@]}"; do
 	        wget -c --progress=bar:force:noscroll "$url" -O "$(basename "$url")"
 		    echo
 	    done
-	    cd ../../
+cd ../

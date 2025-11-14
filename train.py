@@ -51,7 +51,8 @@ def parse_args():
     parser.add_argument('--resume-from', default=None, help='Path to checkpoint to resume from')
     parser.add_argument('--launcher', default='none', choices=['none', 'pytorch', 'slurm'],
                         help='Job launcher for distributed training')
-    parser.add_argument('--local_rank', type=int, default=0,
+    # Support both --local_rank and --local-rank for compatibility
+    parser.add_argument('--local_rank', '--local-rank', type=int, default=0,
                         help='Local rank for distributed training (set by torch.distributed.launch)')
     parser.add_argument('--seed', type=int, default=0, help='Random seed')
     args = parser.parse_args()

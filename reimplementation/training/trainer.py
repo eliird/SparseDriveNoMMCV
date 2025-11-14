@@ -8,7 +8,7 @@ from typing import Dict, Any, Optional
 import torch
 import torch.nn as nn
 import torch.distributed as dist
-from torch.cuda.amp import autocast, GradScaler
+from torch.amp import autocast, GradScaler
 
 from .logger import Logger, get_dist_info
 from .checkpoint import save_checkpoint
@@ -88,6 +88,17 @@ class Trainer:
         self.current_epoch = 0
         self.current_iter = 0
 
+    def get_model(self) -> nn.Module:
+        """
+        Get the underlying model (unwrap DDP if needed).
+
+        Returns:
+            The underlying model without DDP wrapper
+        """
+        if isinstance(self.model, nn.parallel.DistributedDataParallel):
+            return self.model.module
+        return self.model
+
     def train_one_epoch(self, epoch: int) -> Dict[str, float]:
         """
         Train for one epoch.
@@ -125,8 +136,8 @@ class Trainer:
                 img_metas = [img_metas]
 
             # Forward pass
-            with autocast(enabled=self.use_fp16):
-                losses = self.model.forward_train(
+            with autocast(device_type='cuda', enabled=self.use_fp16):
+                losses = self.get_model().forward_train(
                     img=batch['img'],
                     img_metas=img_metas,
                     gt_bboxes_3d=batch.get('gt_bboxes_3d'),

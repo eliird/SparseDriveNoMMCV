@@ -1,7 +1,7 @@
 #!/bin/bash
 # Extract all nuScenes data files and map expansions
 
-cd /data1/work/irdali.durrani/nuscenes_data
+cd ./data
 
 echo "========================================="
 echo "NuScenes Data Extraction Script"
