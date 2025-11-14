@@ -38,6 +38,15 @@ python tools/kmeans/kmeans_motion.py
 ## Run the Training Script
 
 ```sh
+# 1 GPU
+python train.py --config projects/configs/sparsedrive_small_stage1.py --work-dir work_dirs/test
+
+# MultiGPU
+python -m torch.distributed.launch --nproc_per_node=8 train.py \
+    --config projects/configs/sparsedrive_small_stage1.py \
+    --work-dir work_dirs/sparsedrive_small \
+    --launcher pytorch
+================================================================================
 ```
 
 # Original README: SparseDrive: End-to-End Autonomous Driving via Sparse Scene Representation
