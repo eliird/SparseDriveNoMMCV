@@ -318,6 +318,7 @@ class MultiScaleDepthMapGenerator(object):
     
 
 class BBoxRotation(object):
+
     def __call__(self, results):
         angle = results["aug_config"]["rotate_3d"]
         rot_cos = np.cos(angle)

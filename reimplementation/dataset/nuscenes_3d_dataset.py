@@ -865,7 +865,7 @@ class NuScenes3DDataset(Dataset):
                     tmp_dir.cleanup()
 
         if eval_mode['with_map']:
-            from .evaluation.map.vector_eval import VectorEvaluate
+            from .vector_eval import VectorEvaluate
             self.map_evaluator = VectorEvaluate(self.eval_config)
             result_path = self.format_map_results(results, prefix=self.work_dir)
             map_results_dict = self.map_evaluator.evaluate(result_path, logger=logger)
@@ -878,7 +878,7 @@ class NuScenes3DDataset(Dataset):
             results_dict.update(motion_results_dict)
         
         if eval_mode['with_planning']:
-            from .evaluation.planning.planning_eval import planning_eval
+            from .planning_eval import planning_eval
             planning_results_dict = planning_eval(results, self.eval_config, logger=logger)
             results_dict.update(planning_results_dict)
 
