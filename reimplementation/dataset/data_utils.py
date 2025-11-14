@@ -115,7 +115,9 @@ def dump(obj: Any,
     if file is None:
         return handler.dump_to_str(obj, **kwargs)
     elif is_str(file):
-        with open(file, handler.mode) as f:
+        # Use write mode: 'wb' for pickle, 'w' for json
+        write_mode = 'wb' if file_format in ['pkl', 'pickle'] else 'w'
+        with open(file, write_mode) as f:
             handler.dump_to_fileobj(obj, f, **kwargs)
     elif hasattr(file, 'write'):
         handler.dump_to_fileobj(obj, file, **kwargs)
@@ -163,7 +165,9 @@ def load(file: Union[str, Path],
 
     # Load from file or string
     if is_str(file):
-        with open(file, handler.mode) as f:
+        # Use read mode: 'rb' for pickle, 'r' for json
+        read_mode = 'rb' if file_format in ['pkl', 'pickle'] else 'r'
+        with open(file, read_mode) as f:
             return handler.load_from_fileobj(f, **kwargs)
     elif hasattr(file, 'read'):
         return handler.load_from_fileobj(file, **kwargs)

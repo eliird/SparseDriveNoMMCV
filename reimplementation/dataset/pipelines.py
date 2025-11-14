@@ -625,7 +625,7 @@ class NuScenesSparse4DAdaptor(object):
         ]:
             if key not in input_dict:
                 continue
-            input_dict[key] = DC(torch.to_tensor(input_dict[key]), stack=True, cpu_only=False, pad_dims=None)
+            input_dict[key] = DC(to_tensor(input_dict[key]), stack=True, cpu_only=False, pad_dims=None)
         
         return input_dict
 

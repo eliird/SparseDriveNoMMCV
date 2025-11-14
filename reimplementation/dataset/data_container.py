@@ -1,6 +1,20 @@
 import torch
 import numpy as np
+from typing import Union, Type
+from functools import wraps
 
+
+def assert_tensor_type(func):
+    """Decorator to ensure the data is a tensor before calling tensor-specific methods."""
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if not isinstance(self.data, torch.Tensor):
+            raise AttributeError(
+                f'{func.__name__} is only available for torch.Tensor, '
+                f'but got {type(self.data)}'
+            )
+        return func(self, *args, **kwargs)
+    return wrapper
 
 
 class DataContainer:
