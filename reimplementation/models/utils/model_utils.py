@@ -3,9 +3,39 @@ Utility functions for model initialization and checkpoint loading.
 Replaces mmcv/mmengine utilities with pure PyTorch.
 """
 import logging
+import math
 import torch
 import torch.nn as nn
 
+class Scale(nn.Module):
+    """A learnable scale parameter.
+
+    This layer scales the input by a learnable factor. It multiplies a
+    learnable scale parameter of shape (1,) with input of any shape.
+
+    Args:
+        scale (float): Initial value of scale factor. Default: 1.0
+    """
+
+    def __init__(self, scale: float = 1.0):
+        super().__init__()
+        self.scale = nn.Parameter(torch.tensor(scale, dtype=torch.float))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x * self.scale
+
+
+def linear_relu_ln(embed_dims, in_loops, out_loops, input_dims=None):
+    if input_dims is None:
+        input_dims = embed_dims
+    layers = []
+    for _ in range(out_loops):
+        for _ in range(in_loops):
+            layers.append(nn.Linear(input_dims, embed_dims))
+            layers.append(nn.ReLU(inplace=True))
+            input_dims = embed_dims
+        layers.append(nn.LayerNorm(embed_dims))
+    return layers
 
 def constant_init(module, val, bias=0.0):
     """Initialize module with constant value.
@@ -69,6 +99,27 @@ def normal_init(module, mean=0, std=1, bias=0):
         nn.init.constant_(module.bias, bias)
 
 
+def bias_init_with_prob(prob):
+    """Calculate bias initialization for given prior probability.
+    
+    This function calculates the bias initialization value for classification
+    layers based on a desired prior probability. It's equivalent to mmcv's
+    bias_init_with_prob function.
+    
+    Args:
+        prob (float): Prior probability for positive class (0 < prob < 1)
+        
+    Returns:
+        float: Bias initialization value
+        
+    Example:
+        >>> bias_val = bias_init_with_prob(0.01)  # 1% prior probability
+        >>> nn.init.constant_(cls_layer.bias, bias_val)
+    """
+    assert 0 < prob < 1, f"prob must be between 0 and 1, got {prob}"
+    return -math.log((1 - prob) / prob)
+
+
 def load_checkpoint(model, filename, strict=False, logger=None, map_location='cpu'):
     """Load checkpoint from file.
 
@@ -122,9 +173,11 @@ def load_checkpoint(model, filename, strict=False, logger=None, map_location='cp
 
 
 __all__ = [
+    'linear_relu_ln',
     'constant_init',
     'kaiming_init',
     'xavier_init',
     'normal_init',
+    'bias_init_with_prob',
     'load_checkpoint',
 ]

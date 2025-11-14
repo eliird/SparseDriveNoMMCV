@@ -8,6 +8,7 @@ from .model_utils import (
     xavier_init,
     normal_init,
     load_checkpoint,
+    Scale
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     'xavier_init',
     'normal_init',
     'load_checkpoint',
+    'Scale'
 ]

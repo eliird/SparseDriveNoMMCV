@@ -11,10 +11,15 @@
 ### Core Infrastructure
 - [x] **Utility Functions** - `models/utils/model_utils.py`
   - constant_init, kaiming_init, xavier_init, normal_init, load_checkpoint
+  - bias_init_with_prob, Scale (learnable scaling)
 
 - [x] **ConvModule** - `models/common/conv_module.py`
   - Simplified Conv2d + BatchNorm + Activation wrapper
   - Replaces mmcv.cnn.ConvModule
+
+- [x] **CUDA Extensions** - `ops/`
+  - Standalone deformable aggregation CUDA extension
+  - Optional compilation with PyTorch fallback
 
 ### Main Components
 
@@ -61,27 +66,42 @@
 - [ ] **Sparse4DHead**
 
 ### 5.2 Instance Bank (line 127)
-- [ ] **InstanceBank**
-- [ ] **SparseBox3DKeyPointsGenerator** (line 131) - anchor_handler
+- [x] **InstanceBank**
+- [x] **SparseBox3DKeyPointsGenerator** (line 131) - anchor_handler
 
 ### 5.3 Encoders (line 137)
-- [ ] **SparseBox3DEncoder** - anchor_encoder
+- [x] **SparseBox3DEncoder** - anchor_encoder
+  - Test: `python -m reimplementation.models.common.sparse_box_3d_encoder`
 
 ### 5.4 Graph Models (lines 168, 177)
-- [ ] **MultiheadFlashAttention** (temp_graph_model, graph_model)
+- [x] **MultiheadFlashAttention** (temp_graph_model, graph_model)
+  - Fixed flash-attn 2.8.3 compatibility (unpad_input returns 5 values)
+  - Test: `python -m reimplementation.models.common.attention`
 
 ### 5.5 FFN (line 185)
-- [ ] **AsymmetricFFN**
+- [x] **AsymmetricFFN**
+  - Removed mmcv dependencies, pure PyTorch implementation
+  - Test: `python -m reimplementation.models.common.asym_ffn`
 
 ### 5.6 Deformable Aggregation (line 195)
-- [ ] **DeformableFeatureAggregation**
-- [ ] **SparseBox3DKeyPointsGenerator** (line 205) - kps_generator
+- [x] **DeformableFeatureAggregation**
+  - Optional CUDA extension with PyTorch fallback
+  - Extracted standalone CUDA ops from mmdet3d_plugin
+  - Test: `python -m reimplementation.models.deformable.deformable_feature_aggregation`
+- [x] **SparseBox3DKeyPointsGenerator** (line 205) - kps_generator
+  - Generates 3D keypoints from box anchors
+  - Test: `python -m reimplementation.models.deformable.sparse_box_3d_key_point_gen`
 
 ### 5.7 Refinement (line 219)
-- [ ] **SparseBox3DRefinementModule**
+- [x] **SparseBox3DRefinementModule**
+  - 3D bounding box refinement with classification and quality estimation
+  - Test: `python -m reimplementation.models.common.sparse_3d_refinement`
 
 ### 5.8 Sampler (line 226)
-- [ ] **SparseBox3DTarget**
+- [x] **SparseBox3DTarget**
+  - Hungarian matching-based target assignment
+  - Supports denoising training with temporal groups
+  - Test: `python -m reimplementation.models.common.target`
 
 ### 5.9 Losses (lines 251, 258)
 - [ ] **FocalLoss** (line 251)
@@ -234,12 +254,18 @@ We'll implement in dependency order, starting with the simplest:
 
 ## 📊 Progress Summary
 
-**Completed:** 5 components
+**Completed:** 11 components
 - ✅ ResNet (backbone)
-- ✅ FPN (neck)
+- ✅ FPN (neck)  
 - ✅ DenseDepthNet (depth branch)
 - ✅ ConvModule (common utility)
-- ✅ Model utilities (init functions, checkpoint loading)
+- ✅ Model utilities (init functions, checkpoint loading, Scale)
+- ✅ SparseBox3DEncoder (box encoding)
+- ✅ MultiheadFlashAttention (graph attention)
+- ✅ AsymmetricFFN (feedforward network)
+- ✅ DeformableFeatureAggregation (multi-view feature aggregation)
+- ✅ SparseBox3DKeyPointsGenerator (3D keypoint generation)
+- ✅ SparseBox3DRefinementModule (box refinement)
 
 **Next Priority:** Task heads and their dependencies
 1. Start with simple components: Losses, Encoders
@@ -252,22 +278,40 @@ We'll implement in dependency order, starting with the simplest:
 reimplementation/
 ├── models/
 │   ├── __init__.py
-│   ├── sparse_drive.py           ✅ Main model (partial)
+│   ├── sparse_drive.py                           ✅ Main model (partial)
 │   ├── backbones/
 │   │   ├── __init__.py
-│   │   └── resnet.py             ✅ ResNet backbone
+│   │   └── resnet.py                             ✅ ResNet backbone
 │   ├── necks/
 │   │   ├── __init__.py
-│   │   └── fpn.py                ✅ FPN neck
+│   │   └── fpn.py                                ✅ FPN neck
 │   ├── depth/
 │   │   ├── __init__.py
-│   │   └── dense_depth.py        ✅ Depth estimation
+│   │   └── dense_depth.py                        ✅ Depth estimation
 │   ├── common/
 │   │   ├── __init__.py
-│   │   └── conv_module.py        ✅ Simplified ConvModule
+│   │   ├── conv_module.py                        ✅ Simplified ConvModule
+│   │   ├── sparse_box_3d_encoder.py              ✅ Box encoder
+│   │   ├── attention.py                          ✅ Flash attention
+│   │   ├── asym_ffn.py                           ✅ Asymmetric FFN
+│   │   ├── sparse_3d_refinement.py               ✅ Box refinement
+│   │   └── box3d.py                              ✅ Box utilities
+│   ├── deformable/
+│   │   ├── __init__.py
+│   │   ├── deformable_feature_aggregation.py     ✅ Multi-view aggregation
+│   │   └── sparse_box_3d_key_point_gen.py        ✅ 3D keypoint generation
 │   └── utils/
 │       ├── __init__.py
-│       └── model_utils.py        ✅ Initialization & checkpoint utils
+│       └── model_utils.py                        ✅ Utilities + Scale
+├── ops/
+│   ├── __init__.py                               ✅ CUDA extension API
+│   ├── deformable_aggregation.py                ✅ Custom autograd function
+│   ├── setup.py                                 ✅ Build script
+│   ├── README.md                                ✅ Documentation
+│   ├── INTEGRATION.md                           ✅ Integration guide
+│   └── src/
+│       ├── deformable_aggregation.cpp           ✅ C++ bindings
+│       └── deformable_aggregation_cuda.cu       ✅ CUDA kernels
 ```
 
 ---
