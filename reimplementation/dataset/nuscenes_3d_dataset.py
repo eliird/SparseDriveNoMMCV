@@ -812,7 +812,12 @@ class NuScenes3DDataset(Dataset):
             for m in MOTION_METRICS:
                 row_data.append('%.4f' % metrics[f'{class_name}_{m}'])
             table.add_row(row_data)
-        print_log('\n'+str(table), logger=logger)
+
+        table_str = '\n' + str(table)
+        if logger is not None:
+            logger.info(table_str)
+        else:
+            print(table_str)
         return metrics
 
     def evaluate(
@@ -916,14 +921,17 @@ class NuScenes3DDataset(Dataset):
         if "L2" in results_dict:
             metric_str += f'obj_box_col: {(results_dict["obj_box_col"]*100):.3f}%\n'
             metric_str += f'L2: {results_dict["L2"]:.4f}\n\n'
-        
-        print_log(metric_str, logger=logger)
+
+        if logger is not None:
+            logger.info(metric_str)
+        else:
+            print(metric_str)
         return results_dict
 
     def show(self, results, save_dir=None, show=False, pipeline=None):
         save_dir = "./" if save_dir is None else save_dir
         save_dir = os.path.join(save_dir, "visual")
-        print_log(os.path.abspath(save_dir))
+        print(os.path.abspath(save_dir))
         pipeline = Compose(pipeline)
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
