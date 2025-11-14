@@ -1,4 +1,4 @@
-from random import random
+import random
 import numpy as np
 from PIL import Image
 import torch
@@ -346,7 +346,20 @@ class BBoxRotation(object):
                 results["gt_bboxes_3d"], angle
             )
         return results
- 
+    
+    @staticmethod
+    def box_rotate(bbox_3d, angle):
+        rot_cos = np.cos(angle)
+        rot_sin = np.sin(angle)
+        rot_mat_T = np.array(
+            [[rot_cos, rot_sin, 0], [-rot_sin, rot_cos, 0], [0, 0, 1]]
+        )
+        bbox_3d[:, :3] = bbox_3d[:, :3] @ rot_mat_T
+        bbox_3d[:, 6] += angle
+        if bbox_3d.shape[-1] > 7:
+            vel_dims = bbox_3d[:, 7:].shape[-1]
+            bbox_3d[:, 7:] = bbox_3d[:, 7:] @ rot_mat_T[:vel_dims, :vel_dims]
+        return bbox_3d
     
 class PhotoMetricDistortionMultiViewImage:
     """Apply photometric distortion to image sequentially, every transformation
@@ -394,7 +407,7 @@ class PhotoMetricDistortionMultiViewImage:
                 ' please set "to_float32=True" in "LoadImageFromFile" pipeline'
             )
             # random brightness
-            if random.randint(2):
+            if random.randint(0, 1):
                 delta = random.uniform(
                     -self.brightness_delta, self.brightness_delta
                 )
@@ -402,9 +415,9 @@ class PhotoMetricDistortionMultiViewImage:
 
             # mode == 0 --> do random contrast first
             # mode == 1 --> do random contrast last
-            mode = random.randint(2)
+            mode = random.randint(0, 1)
             if mode == 1:
-                if random.randint(2):
+                if random.randint(0, 1):
                     alpha = random.uniform(
                         self.contrast_lower, self.contrast_upper
                     )
@@ -414,13 +427,13 @@ class PhotoMetricDistortionMultiViewImage:
             img = bgr2hsv(img)
 
             # random saturation
-            if random.randint(2):
+            if random.randint(0, 1):
                 img[..., 1] *= random.uniform(
                     self.saturation_lower, self.saturation_upper
                 )
 
             # random hue
-            if random.randint(2):
+            if random.randint(0, 1):
                 img[..., 0] += random.uniform(-self.hue_delta, self.hue_delta)
                 img[..., 0][img[..., 0] > 360] -= 360
                 img[..., 0][img[..., 0] < 0] += 360
@@ -430,15 +443,15 @@ class PhotoMetricDistortionMultiViewImage:
 
             # random contrast
             if mode == 0:
-                if random.randint(2):
+                if random.randint(0, 1):
                     alpha = random.uniform(
                         self.contrast_lower, self.contrast_upper
                     )
                     img *= alpha
 
             # randomly swap channels
-            if random.randint(2):
-                img = img[..., random.permutation(3)]
+            if random.randint(0, 1):
+                img = img[..., np.random.permutation(3)]
             new_imgs.append(img)
         results["img"] = new_imgs
         return results
@@ -596,27 +609,23 @@ class NuScenesSparse4DAdaptor(object):
             input_dict["gt_bboxes_3d"][:, 6] = self.limit_period(
                 input_dict["gt_bboxes_3d"][:, 6], offset=0.5, period=2 * np.pi
             )
-            input_dict["gt_bboxes_3d"] = DC(
-                to_tensor(input_dict["gt_bboxes_3d"]).float()
-            )
+            input_dict["gt_bboxes_3d"] = to_tensor(input_dict["gt_bboxes_3d"]).float()
         if "gt_labels_3d" in input_dict:
-            input_dict["gt_labels_3d"] = DC(
-                to_tensor(input_dict["gt_labels_3d"]).long()
-            )
+            input_dict["gt_labels_3d"] = to_tensor(input_dict["gt_labels_3d"]).long()
 
         imgs = [img.transpose(2, 0, 1) for img in input_dict["img"]]
         imgs = np.ascontiguousarray(np.stack(imgs, axis=0))
-        input_dict["img"] = DC(to_tensor(imgs), stack=True)
+        input_dict["img"] = to_tensor(imgs)
 
         for key in [
-            'gt_map_labels', 
+            'gt_map_labels',
             'gt_map_pts',
             'gt_agent_fut_trajs',
             'gt_agent_fut_masks',
         ]:
             if key not in input_dict:
                 continue
-            input_dict[key] = DC(to_tensor(input_dict[key]), stack=False, cpu_only=False) 
+            input_dict[key] = to_tensor(input_dict[key])
 
         for key in [
             'gt_ego_fut_trajs',
@@ -626,7 +635,7 @@ class NuScenesSparse4DAdaptor(object):
         ]:
             if key not in input_dict:
                 continue
-            input_dict[key] = DC(to_tensor(input_dict[key]), stack=True, cpu_only=False, pad_dims=None)
+            input_dict[key] = to_tensor(input_dict[key])
         
         return input_dict
 
@@ -702,7 +711,7 @@ class Collect:
         img_meta = {}
         for key in self.meta_keys:
             img_meta[key] = results[key]
-        data['img_metas'] = DC(img_meta, cpu_only=True)
+        data['img_metas'] = img_meta  # Return data directly, not wrapped in DataContainer
         for key in self.keys:
             data[key] = results[key]
         return data

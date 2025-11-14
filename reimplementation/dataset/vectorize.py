@@ -190,7 +190,7 @@ class VectorizeMap(object):
             input_dict['gt_map_labels'] = np.array(gt_map_labels, dtype=np.int64)
             input_dict['gt_map_pts'] = np.array(gt_map_pts, dtype=np.float32).reshape(-1, 2 * (self.sample_num - 1), self.sample_num, self.coords_dim)
         else:
-            input_dict['vectors'] = DC(vectors, stack=False, cpu_only=True)
+            input_dict['vectors'] = vectors
         
         return input_dict
 

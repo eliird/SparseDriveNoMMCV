@@ -242,6 +242,81 @@ def test_pipeline_registration():
     return all_registered
 
 
+def test_train_dataloader():
+    """Test creating a dataloader with train pipeline."""
+    print("\n" + "=" * 80)
+    print("TEST 4: Train DataLoader with Full Pipeline")
+    print("=" * 80)
+
+    try:
+        from torch.utils.data import DataLoader
+
+        # Create dataset with train pipeline
+        dataset = NuScenes3DDataset(
+            ann_file='data/infos/nuscenes_infos_train.pkl',
+            pipeline=train_pipeline,
+            data_root='data/nuscenes/',
+            classes=class_names,
+            map_classes=map_class_names,
+            modality=input_modality,
+            test_mode=False,
+            version='v1.0-trainval',
+            data_aug_conf=data_aug_conf,
+        )
+
+        print(f"✓ Dataset with train pipeline created")
+        print(f"  - Number of samples: {len(dataset)}")
+
+        # Create dataloader
+        batch_size = 1  # Start with batch size 1 for testing
+        dataloader = DataLoader(
+            dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=0,  # Use 0 for easier debugging
+            drop_last=False,
+        )
+
+        print(f"✓ DataLoader created")
+        print(f"  - Batch size: {batch_size}")
+        print(f"  - Number of batches: {len(dataloader)}")
+
+        # Test loading first batch
+        print(f"\n  Loading first batch...")
+        batch = next(iter(dataloader))
+
+        print(f"✓ First batch loaded successfully")
+        print(f"\n  Batch contents:")
+        for key in batch.keys():
+            if hasattr(batch[key], 'shape'):
+                print(f"    - {key}: shape {batch[key].shape}, dtype {batch[key].dtype}")
+            elif isinstance(batch[key], list):
+                if len(batch[key]) > 0 and hasattr(batch[key][0], 'shape'):
+                    print(f"    - {key}: list of {len(batch[key])} tensors, first shape {batch[key][0].shape}")
+                else:
+                    print(f"    - {key}: list of length {len(batch[key])}")
+            else:
+                print(f"    - {key}: type {type(batch[key])}")
+
+        # Try to load a few more batches
+        print(f"\n  Testing iteration over multiple batches...")
+        num_batches_to_test = min(3, len(dataloader))
+        for i, batch in enumerate(dataloader):
+            if i >= num_batches_to_test:
+                break
+            print(f"    Batch {i}: ✓")
+
+        print(f"\n✓ Successfully loaded {num_batches_to_test} batches")
+
+        return True
+
+    except Exception as e:
+        print(f"✗ DataLoader test failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
 def main():
     """Run all tests."""
     print("\n" + "=" * 80)
@@ -263,6 +338,9 @@ def main():
     # Test 3: Load a single sample
     sample_ok = test_single_sample(dataset, idx=0)
 
+    # Test 4: Train dataloader
+    dataloader_ok = test_train_dataloader()
+
     # Summary
     print("\n" + "=" * 80)
     print("TEST SUMMARY")
@@ -270,8 +348,9 @@ def main():
     print(f"  Pipeline registration: {'✓ PASS' if pipeline_ok else '✗ FAIL'}")
     print(f"  Dataset initialization: {'✓ PASS' if dataset is not None else '✗ FAIL'}")
     print(f"  Sample loading: {'✓ PASS' if sample_ok else '✗ FAIL'}")
+    print(f"  Train dataloader: {'✓ PASS' if dataloader_ok else '✗ FAIL'}")
 
-    all_passed = pipeline_ok and dataset is not None and sample_ok
+    all_passed = pipeline_ok and dataset is not None and sample_ok and dataloader_ok
     print(f"\n  Overall: {'✓ ALL TESTS PASSED' if all_passed else '✗ SOME TESTS FAILED'}")
     print("=" * 80 + "\n")
 
