@@ -6,6 +6,8 @@ import logging
 import math
 import torch
 import torch.nn as nn
+import torch.distributed as dist
+
 
 class Scale(nn.Module):
     """A learnable scale parameter.
@@ -171,6 +173,13 @@ def load_checkpoint(model, filename, strict=False, logger=None, map_location='cp
 
     return checkpoint
 
+def reduce_mean(tensor):
+    """"Obtain the mean of tensor on different GPUs."""
+    if not (dist.is_available() and dist.is_initialized()):
+        return tensor
+    tensor = tensor.clone()
+    dist.all_reduce(tensor.div_(dist.get_world_size()), op=dist.ReduceOp.SUM)
+    return tensor
 
 __all__ = [
     'linear_relu_ln',
@@ -180,4 +189,5 @@ __all__ = [
     'normal_init',
     'bias_init_with_prob',
     'load_checkpoint',
+    'reduce_mean',
 ]

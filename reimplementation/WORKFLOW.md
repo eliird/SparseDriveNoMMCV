@@ -107,13 +107,19 @@
 - [x] **FocalLoss** (line 251)
   - CUDA extension with PyTorch fallback
   - Test: `python -m reimplementation.models.losses.focal_loss`
-- [ ] **SparseBox3DLoss** (line 258)
+- [x] **SparseBox3DLoss** (line 258)
   - [x] **L1Loss & SmoothL1Loss** (line 259)
     - Removed mmcv dependencies
     - Pure PyTorch implementation
     - Test: `python -m reimplementation.models.losses.l1_loss`
-  - [ ] **CrossEntropyLoss** (line 260)
-  - [ ] **GaussianFocalLoss** (line 261)
+  - [x] **CrossEntropyLoss** (line 260)
+    - Supports standard CE, binary CE, and soft CE
+    - Test: `python -m reimplementation.models.losses.cross_entropy`
+  - [x] **GaussianFocalLoss** (line 261)
+    - For heatmap-based keypoint detection
+    - Test: `python -m reimplementation.models.losses.guassian`
+  - Complete wrapper with dict-based configuration
+  - Test: `python -m reimplementation.models.losses.sparse_box`
 
 ### 5.10 Decoder (line 264)
 - [ ] **SparseBox3DDecoder**
@@ -259,7 +265,7 @@ We'll implement in dependency order, starting with the simplest:
 
 ## 📊 Progress Summary
 
-**Completed:** 14 components
+**Completed:** 17 components
 - ✅ ResNet (backbone)
 - ✅ FPN (neck)
 - ✅ DenseDepthNet (depth branch)
@@ -274,12 +280,16 @@ We'll implement in dependency order, starting with the simplest:
 - ✅ SparseBox3DTarget (Hungarian matching & denoising)
 - ✅ FocalLoss (CUDA extension with PyTorch fallback)
 - ✅ L1Loss & SmoothL1Loss (pure PyTorch)
+- ✅ CrossEntropyLoss (standard, binary, soft CE)
+- ✅ GaussianFocalLoss (heatmap keypoint detection)
+- ✅ SparseBox3DLoss (complete loss wrapper)
 
 **Next Priority:** Task heads and their dependencies
-1. Start with simple components: Losses, Encoders
-2. Build up to Instance Bank
-3. Implement Sparse4DHead
-4. Implement SparseDriveHead to unify everything
+1. ~~Simple Losses~~ ✅ All loss modules complete!
+2. **InstanceBank** - Core component for detection/map heads
+3. **Encoders** - SparsePoint3DEncoder (for map head)
+4. **Sparse4DHead** - Detection head
+5. **SparseDriveHead** - Unified head wrapper
 
 **Files Created:**
 ```
@@ -308,14 +318,18 @@ reimplementation/
 │   ├── losses/
 │   │   ├── __init__.py
 │   │   ├── focal_loss.py                         ✅ Focal loss (CUDA + fallback)
-│   │   └── l1_loss.py                            ✅ L1 & Smooth L1 loss
+│   │   ├── l1_loss.py                            ✅ L1 & Smooth L1 loss
+│   │   ├── cross_entropy.py                      ✅ Cross entropy (standard/binary/soft)
+│   │   ├── guassian.py                           ✅ Gaussian focal loss
+│   │   └── sparse_box.py                         ✅ Sparse box 3D loss wrapper
 │   ├── deformable/
 │   │   ├── __init__.py
 │   │   ├── deformable_feature_aggregation.py     ✅ Multi-view aggregation
 │   │   └── sparse_box_3d_key_point_gen.py        ✅ 3D keypoint generation
 │   └── utils/
 │       ├── __init__.py
-│       └── model_utils.py                        ✅ Utilities + Scale
+│       ├── model_utils.py                        ✅ Utilities + Scale + bias_init_with_prob
+│       └── loss_utils.py                         ✅ Loss utilities (weighted_loss, reduce_loss)
 ├── ops/
 │   ├── __init__.py                               ✅ CUDA extension API
 │   ├── deformable_aggregation.py                ✅ Custom autograd function

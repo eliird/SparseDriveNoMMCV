@@ -77,7 +77,6 @@ class BaseTargetWithDenoising(ABC):
         self.dn_metas = dict(dn_anchor=dn_anchor[:, : self.num_temp_dn_groups])
 
 
-
 class SparseBox3DTarget(BaseTargetWithDenoising):
     """Target assignment for 3D object detection with denoising training.
 
@@ -709,6 +708,9 @@ def test_sparse_box_3d_target():
         print("   ✓ Denoising with instance IDs works")
 
     print("\n✓ All tests passed!")
+
+
+
 
 
 if __name__ == '__main__':
