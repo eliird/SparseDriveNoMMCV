@@ -243,6 +243,7 @@ class ResNet(nn.Module):
         assert len(strides) == len(dilations) == num_stages
         assert max(out_indices) < num_stages
 
+        self.depth = depth
         self.out_indices = out_indices
         self.style = style
         self.frozen_stages = frozen_stages
@@ -285,8 +286,42 @@ class ResNet(nn.Module):
 
     def init_weights(self, pretrained: Optional[str] = None) -> None:
         if isinstance(pretrained, str):
-            logger = logging.getLogger()
-            load_checkpoint(self, pretrained, strict=False, logger=logger)
+            # Support loading from torchvision
+            if pretrained.lower() == 'torchvision':
+                try:
+                    import torchvision.models as models
+                    logger = logging.getLogger()
+                    logger.info(f"Loading ResNet{self.depth} pretrained weights from torchvision")
+
+                    # Load torchvision pretrained model
+                    if hasattr(models, f'ResNet{self.depth}_Weights'):
+                        # PyTorch >= 1.13 with new weights API
+                        weights_enum = getattr(models, f'ResNet{self.depth}_Weights')
+                        pretrained_model = getattr(models, f'resnet{self.depth}')(weights=weights_enum.IMAGENET1K_V1)
+                    else:
+                        # Older PyTorch versions
+                        pretrained_model = getattr(models, f'resnet{self.depth}')(pretrained=True)
+
+                    # Load state dict (ignore fc layer)
+                    pretrained_dict = pretrained_model.state_dict()
+                    model_dict = self.state_dict()
+                    pretrained_dict = {k: v for k, v in pretrained_dict.items()
+                                     if k in model_dict and not k.startswith('fc')}
+                    model_dict.update(pretrained_dict)
+                    self.load_state_dict(model_dict)
+                    logger.info("Successfully loaded torchvision pretrained weights")
+                except Exception as e:
+                    logger = logging.getLogger()
+                    logger.warning(f"Failed to load from torchvision: {e}. Using random initialization.")
+                    for m in self.modules():
+                        if isinstance(m, nn.Conv2d):
+                            kaiming_init(m)
+                        elif isinstance(m, nn.BatchNorm2d):
+                            constant_init(m, 1)
+            else:
+                # Load from checkpoint file
+                logger = logging.getLogger()
+                load_checkpoint(self, pretrained, strict=False, logger=logger)
         elif pretrained is None:
             for m in self.modules():
                 if isinstance(m, nn.Conv2d):
