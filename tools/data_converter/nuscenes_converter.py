@@ -19,7 +19,7 @@ from nuscenes.utils.data_classes import Box
 from nuscenes.utils.geometry_utils import view_points
 from nuscenes.prediction import PredictHelper, convert_local_coords_to_global
 
-from projects.mmdet3d_plugin.datasets.map_utils.nuscmap_extractor import NuscMapExtractor
+from reimplementation.data.nuscmap_extractor import NuscMapExtractor
 
 NameMapping = {
     "movable_object.barrier": "barrier",

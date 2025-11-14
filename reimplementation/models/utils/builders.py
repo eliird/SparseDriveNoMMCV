@@ -112,9 +112,20 @@ def _get_component_class(module_type: str):
         return CrossEntropyLoss
 
     # ========== Heads ==========
+    elif module_type == 'Sparse4DHead':
+        from ..heads.sparse_4d import Sparse4DHead
+        return Sparse4DHead
     elif module_type == 'MotionPlanningHead':
         from ..motion.motion_plaaning_head import MotionPlanningHead
         return MotionPlanningHead
+    elif module_type == 'SparseDriveHead':
+        from ..heads.sparse_drive_head import SparseDriveHead
+        return SparseDriveHead
+
+    # ========== Full Models ==========
+    elif module_type == 'SparseDrive':
+        from ..sparse_drive import SparseDrive
+        return SparseDrive
 
     else:
         raise KeyError(

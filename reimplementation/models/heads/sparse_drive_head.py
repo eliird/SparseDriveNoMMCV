@@ -5,25 +5,26 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from ..utils.builders import build_from_cfg
+
 
 class SparseDriveHead(nn.Module):
     def __init__(
         self,
         task_config: dict,
-        det_head = dict,
-        map_head = dict,
-        motion_plan_head = dict,
-        init_cfg=None,
+        det_head = None,
+        map_head = None,
+        motion_plan_head = None,
         **kwargs,
     ):
-        super(SparseDriveHead, self).__init__(init_cfg)
+        super(SparseDriveHead, self).__init__()
         self.task_config = task_config
         if self.task_config['with_det']:
-            self.det_head = build_head(det_head)
+            self.det_head = build_from_cfg(det_head)
         if self.task_config['with_map']:
-            self.map_head = build_head(map_head)
+            self.map_head = build_from_cfg(map_head)
         if self.task_config['with_motion_plan']:
-            self.motion_plan_head = build_head(motion_plan_head)
+            self.motion_plan_head = build_from_cfg(motion_plan_head)
 
     def init_weights(self):
         if self.task_config['with_det']:

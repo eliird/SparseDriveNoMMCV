@@ -3,6 +3,13 @@ Pure PyTorch models for SparseDrive.
 All mmcv/mmdet dependencies removed.
 """
 
-# Will be populated as we implement each module
+from .sparse_drive import SparseDrive
+from .heads import Sparse4DHead, SparseDriveHead
+from .motion import MotionPlanningHead
 
-__all__ = []
+__all__ = [
+    'SparseDrive',
+    'Sparse4DHead',
+    'SparseDriveHead',
+    'MotionPlanningHead',
+]
