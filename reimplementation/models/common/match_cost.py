@@ -26,25 +26,13 @@ class BaseMatchCost:
         self.weight = weight
 
     @abstractmethod
-    def __call__(self,
-                 pred_instances: InstanceData,
-                 gt_instances: InstanceData,
-                 img_meta: Optional[dict] = None,
-                 **kwargs) -> Tensor:
+    def __call__(self, *args, **kwargs) -> Tensor:
         """Compute match cost.
 
         Args:
-            pred_instances (:obj:`InstanceData`): Instances of model
-                predictions. It includes ``priors``, and the priors can
-                be anchors or points, or the bboxes predicted by the
-                previous stage, has shape (n, 4). The bboxes predicted by
-                the current model or stage will be named ``bboxes``,
-                ``labels``, and ``scores``, the same as the ``InstanceData``
-                in other places.
-            gt_instances (:obj:`InstanceData`): Ground truth of instance
-                annotations. It usually includes ``bboxes``, with shape (k, 4),
-                and ``labels``, with shape (k, ).
-            img_meta (dict, optional): Image information.
+            Subclasses define their own arguments. Typically:
+            - For detection: pred_instances, gt_instances containing bboxes, labels, scores
+            - For lines/maps: pred lines/scores, gt lines/labels
 
         Returns:
             Tensor: Match Cost matrix of shape (num_preds, num_gts).
@@ -221,3 +209,176 @@ def build_match_cost(cfg):
         return MapQueriesCost(**cost_kwargs)
     else:
         raise ValueError(f"Unknown match cost type: {cost_type}")
+
+
+if __name__ == '__main__':
+    print("Testing match_cost module...")
+
+    # Test 1: FocalLossCost basic functionality
+    print("\n=== Test 1: FocalLossCost basic ===")
+    focal_cost = FocalLossCost(alpha=0.25, gamma=2.0, weight=1.0)
+
+    # 5 queries, 3 classes
+    cls_pred = torch.randn(5, 3)
+    # 3 ground truth objects with labels [0, 1, 2]
+    gt_labels = torch.tensor([0, 1, 2])
+
+    cost = focal_cost(cls_pred, gt_labels)
+    print(f"FocalLossCost output shape: {cost.shape}")
+    print(f"Expected shape: torch.Size([5, 3]) (num_queries, num_gt)")
+    assert cost.shape == torch.Size([5, 3]), "Cost matrix should be (num_queries, num_gt)"
+    assert not torch.isnan(cost).any(), "Cost should not contain NaN"
+    print("✓ Test 1 passed")
+
+    # Test 2: FocalLossCost with weight
+    print("\n=== Test 2: FocalLossCost with weight ===")
+    focal_cost_w2 = FocalLossCost(alpha=0.25, gamma=2.0, weight=2.0)
+    cost_w1 = focal_cost(cls_pred, gt_labels)
+    cost_w2 = focal_cost_w2(cls_pred, gt_labels)
+
+    print(f"Cost with weight=1.0: {cost_w1[0, 0]:.6f}")
+    print(f"Cost with weight=2.0: {cost_w2[0, 0]:.6f}")
+    assert torch.allclose(cost_w2, cost_w1 * 2.0, rtol=1e-5), "Weight should scale the cost"
+    print("✓ Test 2 passed")
+
+    # Test 3: LinesL1Cost without permutation
+    print("\n=== Test 3: LinesL1Cost without permutation ===")
+    lines_cost = LinesL1Cost(weight=10.0, beta=0.0, permute=False)
+
+    # 8 queries, each with 20 points (40 coords)
+    lines_pred = torch.randn(8, 40)
+    # 5 ground truth lines
+    gt_lines = torch.randn(5, 40)
+
+    cost = lines_cost(lines_pred, gt_lines)
+    print(f"LinesL1Cost output shape: {cost.shape}")
+    assert cost.shape == torch.Size([8, 5]), "Cost should be (num_queries, num_gt)"
+    assert not torch.isnan(cost).any(), "Cost should not contain NaN"
+    print("✓ Test 3 passed")
+
+    # Test 4: LinesL1Cost with permutation
+    print("\n=== Test 4: LinesL1Cost with permutation ===")
+    lines_cost_perm = LinesL1Cost(weight=10.0, beta=0.01, permute=True)
+
+    # 8 queries
+    lines_pred = torch.randn(8, 40)
+    # 5 ground truth lines, each with 2 permutations
+    gt_lines = torch.randn(5, 2, 40)
+
+    result = lines_cost_perm(lines_pred, gt_lines)
+    cost, permute_idx = result
+
+    print(f"LinesL1Cost (permute) output shapes: cost={cost.shape}, permute_idx={permute_idx.shape}")
+    assert cost.shape == torch.Size([8, 5]), "Cost should be (num_queries, num_gt)"
+    assert permute_idx.shape == torch.Size([8, 5]), "Permute index should be (num_queries, num_gt)"
+    assert not torch.isnan(cost).any(), "Cost should not contain NaN"
+    print("✓ Test 4 passed")
+
+    # Test 5: MapQueriesCost
+    print("\n=== Test 5: MapQueriesCost ===")
+    map_cost = MapQueriesCost(
+        cls_cost=dict(type='FocalLossCost', weight=1.0),
+        reg_cost=dict(type='LinesL1Cost', weight=10.0, beta=0.01, permute=True)
+    )
+
+    # Prepare predictions
+    preds = {
+        'scores': torch.randn(8, 3),  # 8 queries, 3 classes
+        'lines': torch.randn(8, 40)    # 8 queries, 20 points
+    }
+
+    # Prepare ground truth
+    gts = {
+        'labels': torch.tensor([0, 1, 2, 0, 1]),  # 5 ground truth
+        'lines': torch.randn(5, 2, 40)             # 5 GT, 2 permutations
+    }
+
+    result = map_cost(preds, gts, ignore_cls_cost=False)
+    cost, permute_idx = result
+
+    print(f"MapQueriesCost output shapes: cost={cost.shape}, permute_idx={permute_idx.shape}")
+    assert cost.shape == torch.Size([8, 5]), "Total cost should be (num_queries, num_gt)"
+    assert permute_idx.shape == torch.Size([8, 5]), "Permute index should be (num_queries, num_gt)"
+    print("✓ Test 5 passed")
+
+    # Test 6: MapQueriesCost with ignore_cls_cost
+    print("\n=== Test 6: MapQueriesCost ignore_cls_cost ===")
+    result_no_cls = map_cost(preds, gts, ignore_cls_cost=True)
+    cost_no_cls, _ = result_no_cls
+
+    result_with_cls = map_cost(preds, gts, ignore_cls_cost=False)
+    cost_with_cls, _ = result_with_cls
+
+    print(f"Cost without cls: {cost_no_cls[0, 0]:.6f}")
+    print(f"Cost with cls: {cost_with_cls[0, 0]:.6f}")
+    # They should be different
+    assert not torch.allclose(cost_no_cls, cost_with_cls), "Costs should differ when cls is included/excluded"
+    print("✓ Test 6 passed")
+
+    # Test 7: build_match_cost with dict
+    print("\n=== Test 7: build_match_cost with dict config ===")
+    focal_cfg = dict(type='FocalLossCost', alpha=0.25, gamma=2.0, weight=1.0)
+    focal_inst = build_match_cost(focal_cfg)
+
+    assert isinstance(focal_inst, FocalLossCost), "Should build FocalLossCost instance"
+    assert focal_inst.alpha == 0.25, "Alpha should be set correctly"
+    assert focal_inst.gamma == 2.0, "Gamma should be set correctly"
+    print("✓ Test 7 passed")
+
+    # Test 8: build_match_cost with instance
+    print("\n=== Test 8: build_match_cost with existing instance ===")
+    existing_cost = FocalLossCost(alpha=0.5, gamma=3.0)
+    result = build_match_cost(existing_cost)
+
+    assert result is existing_cost, "Should return the same instance"
+    print("✓ Test 8 passed")
+
+    # Test 9: build_match_cost with None
+    print("\n=== Test 9: build_match_cost with None ===")
+    result = build_match_cost(None)
+    assert result is None, "Should return None"
+    print("✓ Test 9 passed")
+
+    # Test 10: LinesL1Cost with smooth_l1
+    print("\n=== Test 10: LinesL1Cost with smooth L1 (beta > 0) ===")
+    lines_cost_smooth = LinesL1Cost(weight=5.0, beta=0.1, permute=False)
+
+    lines_pred = torch.randn(6, 40)
+    gt_lines = torch.randn(4, 40)
+
+    cost = lines_cost_smooth(lines_pred, gt_lines)
+    print(f"Smooth L1 cost shape: {cost.shape}")
+    assert cost.shape == torch.Size([6, 4]), "Cost should be (num_queries, num_gt)"
+    assert not torch.isnan(cost).any(), "Cost should not contain NaN"
+    print("✓ Test 10 passed")
+
+    # Test 11: Edge case - single query, single GT
+    print("\n=== Test 11: Edge case - single query, single GT ===")
+    focal_cost = FocalLossCost(weight=1.0)
+    cls_pred = torch.randn(1, 3)
+    gt_labels = torch.tensor([1])
+
+    cost = focal_cost(cls_pred, gt_labels)
+    print(f"Single query/GT cost shape: {cost.shape}")
+    assert cost.shape == torch.Size([1, 1]), "Cost should be (1, 1)"
+    print("✓ Test 11 passed")
+
+    # Test 12: Gradient flow through costs
+    print("\n=== Test 12: Gradient flow ===")
+    cls_pred = torch.randn(5, 3, requires_grad=True)
+    gt_labels = torch.tensor([0, 1, 2])
+
+    focal_cost = FocalLossCost(weight=1.0)
+    cost = focal_cost(cls_pred, gt_labels)
+
+    # Take mean and backprop
+    cost.mean().backward()
+
+    print(f"Gradient shape: {cls_pred.grad.shape}")
+    assert cls_pred.grad is not None, "Gradients should be computed"
+    assert not torch.isnan(cls_pred.grad).any(), "Gradients should not contain NaN"
+    print("✓ Test 12 passed")
+
+    print("\n" + "="*50)
+    print("All match_cost tests passed!")
+    print("="*50)

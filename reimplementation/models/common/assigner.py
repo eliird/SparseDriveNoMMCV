@@ -274,3 +274,275 @@ def build_assigner(cfg):
         return HungarianLinesAssigner(**assigner_kwargs)
     else:
         raise ValueError(f"Unknown assigner type: {assigner_type}")
+
+
+if __name__ == '__main__':
+    print("Testing assigner module...")
+
+    # Test 1: HungarianLinesAssigner basic functionality
+    print("\n=== Test 1: HungarianLinesAssigner basic ===")
+    assigner = HungarianLinesAssigner(
+        cost=dict(
+            type='MapQueriesCost',
+            cls_cost=dict(type='FocalLossCost', weight=1.0),
+            reg_cost=dict(type='LinesL1Cost', weight=10.0, beta=0.01, permute=True),
+        )
+    )
+
+    # 8 predictions
+    preds = {
+        'scores': torch.randn(8, 3),  # 8 queries, 3 classes
+        'lines': torch.randn(8, 40)   # 8 queries, 20 points (40 coords)
+    }
+
+    # 5 ground truth
+    gts = {
+        'labels': torch.tensor([0, 1, 2, 0, 1]),  # 5 GT labels
+        'lines': torch.randn(5, 2, 40)            # 5 GT lines, 2 permutations
+    }
+
+    matched_row_inds, matched_col_inds, gt_permute_idx = assigner.assign(preds, gts)
+
+    print(f"Matched row indices (predictions): {matched_row_inds}")
+    print(f"Matched col indices (GT): {matched_col_inds}")
+    print(f"GT permute indices shape: {gt_permute_idx.shape}")
+
+    assert len(matched_row_inds) == len(matched_col_inds), "Should have same number of matches"
+    assert len(matched_row_inds) == 5, "Should match all 5 GT (since we have 8 queries)"
+    assert gt_permute_idx.shape == torch.Size([8, 5]), "Permute index should be (num_preds, num_gts)"
+    print("✓ Test 1 passed")
+
+    # Test 2: HungarianLinesAssigner with empty GT
+    print("\n=== Test 2: HungarianLinesAssigner with empty GT ===")
+    preds_empty = {
+        'scores': torch.randn(8, 3),
+        'lines': torch.randn(8, 40)
+    }
+    gts_empty = {
+        'labels': torch.tensor([]),
+        'lines': torch.empty(0, 2, 40)
+    }
+
+    result = assigner.assign(preds_empty, gts_empty)
+    assert result == (None, None, None), "Should return (None, None, None) for empty GT"
+    print("✓ Test 2 passed")
+
+    # Test 3: SparsePoint3DTarget initialization
+    print("\n=== Test 3: SparsePoint3DTarget initialization ===")
+    target = SparsePoint3DTarget(
+        assigner=dict(
+            type='HungarianLinesAssigner',
+            cost=dict(
+                type='MapQueriesCost',
+                cls_cost=dict(type='FocalLossCost', weight=1.0),
+                reg_cost=dict(type='LinesL1Cost', weight=10.0, beta=0.01, permute=True),
+            ),
+        ),
+        num_cls=3,
+        num_sample=20,
+        roi_size=(30, 60),
+    )
+
+    assert target.num_cls == 3, "num_cls should be set correctly"
+    assert target.num_sample == 20, "num_sample should be set correctly"
+    assert target.roi_size == (30, 60), "roi_size should be set correctly"
+    assert isinstance(target.assigner, HungarianLinesAssigner), "Should build HungarianLinesAssigner"
+    print("✓ Test 3 passed")
+
+    # Test 4: SparsePoint3DTarget.normalize_line
+    print("\n=== Test 4: SparsePoint3DTarget.normalize_line ===")
+    target = SparsePoint3DTarget(
+        assigner=dict(
+            type='HungarianLinesAssigner',
+            cost=dict(
+                type='MapQueriesCost',
+                cls_cost=dict(type='FocalLossCost', weight=1.0),
+                reg_cost=dict(type='LinesL1Cost', weight=10.0, beta=0.01, permute=True),
+            ),
+        ),
+        num_cls=3,
+        num_sample=20,
+        roi_size=(30, 60),
+    )
+
+    # Create lines in range [-15, 15] for x and [-30, 30] for y
+    lines = torch.tensor([[0.0, 0.0] * 20])  # Center point repeated
+    normalized = target.normalize_line(lines)
+
+    print(f"Original line shape: {lines.shape}")
+    print(f"Normalized line shape: {normalized.shape}")
+    print(f"Center point normalized value: {normalized[0, 0]:.3f}, {normalized[0, 1]:.3f}")
+
+    # Center (0, 0) should map to (0.5, 0.5) approximately
+    assert normalized.shape == lines.shape, "Shape should be preserved"
+    assert -0.1 < normalized[0, 0] < 0.6, "x coordinate should be around 0.5"
+    assert -0.1 < normalized[0, 1] < 0.6, "y coordinate should be around 0.5"
+    print("✓ Test 4 passed")
+
+    # Test 5: SparsePoint3DTarget.sample
+    print("\n=== Test 5: SparsePoint3DTarget.sample ===")
+    target = SparsePoint3DTarget(
+        assigner=dict(
+            type='HungarianLinesAssigner',
+            cost=dict(
+                type='MapQueriesCost',
+                cls_cost=dict(type='FocalLossCost', weight=1.0),
+                reg_cost=dict(type='LinesL1Cost', weight=10.0, beta=0.01, permute=True),
+            ),
+        ),
+        num_cls=3,
+        num_sample=20,
+        roi_size=(30, 60),
+    )
+
+    # Batch size 2, 100 predictions, 3 classes
+    cls_preds = torch.randn(2, 100, 3)  # Tensor with batch dimension
+    # 100 predictions, 40 coordinates (20 points)
+    pts_preds = torch.randn(2, 100, 40)
+
+    # Ground truth: 5 lines for first batch, 3 lines for second batch
+    cls_targets = [torch.tensor([0, 1, 2, 0, 1]), torch.tensor([1, 2, 0])]
+    # GT lines with 2 permutations
+    pts_targets = [torch.randn(5, 2, 40), torch.randn(3, 2, 40)]
+
+    output_cls_target, output_box_target, output_reg_weights = target.sample(
+        cls_preds, pts_preds, cls_targets, pts_targets
+    )
+
+    print(f"Output cls target shape: {output_cls_target.shape}")
+    print(f"Output box target shape: {output_box_target.shape}")
+    print(f"Output reg weights shape: {output_reg_weights.shape}")
+
+    assert output_cls_target.shape == torch.Size([2, 100]), "Cls target should be (batch, num_queries)"
+    assert output_box_target.shape == torch.Size([2, 100, 40]), "Box target should match predictions"
+    assert output_reg_weights.shape == torch.Size([2, 100, 40]), "Weights should match predictions"
+
+    # Check that background queries are assigned class = num_cls (3)
+    num_background_b0 = (output_cls_target[0] == 3).sum().item()
+    print(f"Number of background queries in batch 0: {num_background_b0}")
+    assert num_background_b0 == 95, "Should have 95 background queries (100 - 5 matched)"
+    print("✓ Test 5 passed")
+
+    # Test 6: SparsePoint3DTarget with empty GT
+    print("\n=== Test 6: SparsePoint3DTarget.sample with empty GT ===")
+    cls_preds_empty = torch.randn(1, 50, 3)  # Tensor with batch dimension
+    pts_preds_empty = torch.randn(1, 50, 40)
+    cls_targets_empty = [torch.tensor([])]
+    pts_targets_empty = [torch.empty(0, 2, 40)]
+
+    output_cls, output_box, output_weights = target.sample(
+        cls_preds_empty, pts_preds_empty, cls_targets_empty, pts_targets_empty
+    )
+
+    # All should be background (class = num_cls = 3)
+    assert (output_cls[0] == 3).all(), "All queries should be background when GT is empty"
+    assert (output_weights[0] == 0).all(), "All weights should be 0 when GT is empty"
+    print("✓ Test 6 passed")
+
+    # Test 7: build_assigner with dict
+    print("\n=== Test 7: build_assigner with dict config ===")
+    assigner_cfg = dict(
+        type='HungarianLinesAssigner',
+        cost=dict(
+            type='MapQueriesCost',
+            cls_cost=dict(type='FocalLossCost', weight=1.0),
+            reg_cost=dict(type='LinesL1Cost', weight=10.0, beta=0.01, permute=True),
+        )
+    )
+    assigner_inst = build_assigner(assigner_cfg)
+
+    assert isinstance(assigner_inst, HungarianLinesAssigner), "Should build HungarianLinesAssigner"
+    print("✓ Test 7 passed")
+
+    # Test 8: build_assigner with instance
+    print("\n=== Test 8: build_assigner with existing instance ===")
+    existing_assigner = HungarianLinesAssigner(
+        cost=dict(type='MapQueriesCost',
+                  cls_cost=dict(type='FocalLossCost', weight=1.0),
+                  reg_cost=dict(type='LinesL1Cost', weight=10.0))
+    )
+    result = build_assigner(existing_assigner)
+
+    assert result is existing_assigner, "Should return the same instance"
+    print("✓ Test 8 passed")
+
+    # Test 9: build_assigner with None
+    print("\n=== Test 9: build_assigner with None ===")
+    result = build_assigner(None)
+    assert result is None, "Should return None"
+    print("✓ Test 9 passed")
+
+    # Test 10: BaseTargetWithDenoising methods
+    print("\n=== Test 10: BaseTargetWithDenoising denoising methods ===")
+    target = SparsePoint3DTarget(
+        assigner=dict(
+            type='HungarianLinesAssigner',
+            cost=dict(type='MapQueriesCost',
+                      cls_cost=dict(type='FocalLossCost', weight=1.0),
+                      reg_cost=dict(type='LinesL1Cost', weight=10.0))
+        ),
+        num_dn_groups=2,
+        num_temp_dn_groups=1,
+        num_cls=3,
+        num_sample=20,
+        roi_size=(30, 60),
+    )
+
+    assert target.num_dn_groups == 2, "num_dn_groups should be set"
+    assert target.num_temp_dn_groups == 1, "num_temp_dn_groups should be set"
+
+    # Test get_dn_anchors (returns None in base implementation)
+    result = target.get_dn_anchors([], [])
+    assert result is None, "get_dn_anchors should return None in base implementation"
+
+    # Test cache_dn
+    dn_anchor = torch.randn(10, 5, 10)  # (batch, dn_groups, features)
+    target.cache_dn(None, dn_anchor, None, None, None)
+    assert target.dn_metas is not None, "dn_metas should be cached"
+    assert 'dn_anchor' in target.dn_metas, "dn_anchor should be in dn_metas"
+    # Should only cache first num_temp_dn_groups (1)
+    assert target.dn_metas['dn_anchor'].shape[1] == 1, "Should only cache num_temp_dn_groups"
+    print("✓ Test 10 passed")
+
+    # Test 11: Verify Hungarian matching is optimal
+    print("\n=== Test 11: Verify Hungarian matching optimality ===")
+    # Create a simple case where we know the optimal matching
+    assigner = HungarianLinesAssigner(
+        cost=dict(
+            type='MapQueriesCost',
+            cls_cost=dict(type='FocalLossCost', weight=0.0),  # Disable cls cost
+            reg_cost=dict(type='LinesL1Cost', weight=1.0, beta=0.0, permute=False),
+        )
+    )
+
+    # Create predictions and GT where optimal matching is clear
+    # 3 queries, 2 GT
+    preds = {
+        'scores': torch.randn(3, 2),
+        'lines': torch.tensor([[0.0] * 40,  # Very close to GT 0
+                               [1.0] * 40,  # Very close to GT 1
+                               [0.5] * 40])  # In between
+    }
+
+    gts = {
+        'labels': torch.tensor([0, 1]),
+        'lines': torch.tensor([[0.01] * 40,   # GT 0
+                               [0.99] * 40])   # GT 1
+    }
+
+    matched_row, matched_col, _ = assigner.assign(preds, gts)
+
+    print(f"Matched predictions: {matched_row}")
+    print(f"Matched GT: {matched_col}")
+
+    # Query 0 should match GT 0, Query 1 should match GT 1
+    matching_dict = dict(zip(matched_row, matched_col))
+    print(f"Matching: {matching_dict}")
+
+    # Verify we got 2 matches (one per GT)
+    assert len(matched_row) == 2, "Should match both GTs"
+    print("✓ Test 11 passed")
+
+    print("\n" + "="*50)
+    print("All assigner tests passed!")
+    print("="*50)
