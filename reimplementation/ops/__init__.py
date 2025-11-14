@@ -1,17 +1,28 @@
 """
-CUDA operations for efficient deformable aggregation.
+CUDA operations for SparseDrive.
 Pure PyTorch/CUDA implementation without mmcv dependencies.
+
+Available operations:
+  - Deformable aggregation: Multi-view feature aggregation
+  - Sigmoid focal loss: Efficient focal loss computation
 """
 import torch
 
-from .deformable_aggregation import DeformableAggregationFunction, CUDA_EXT_AVAILABLE
+from .deformable_aggregation import DeformableAggregationFunction, CUDA_EXT_AVAILABLE as DAF_AVAILABLE
+from .signmoid_focal_loss import sigmoid_focal_loss, CUDA_EXT_AVAILABLE as FOCAL_LOSS_AVAILABLE
 
 __all__ = [
     'deformable_aggregation_function',
     'feature_maps_format',
     'DeformableAggregationFunction',
-    'CUDA_EXT_AVAILABLE',
+    'sigmoid_focal_loss',
+    'DAF_AVAILABLE',
+    'FOCAL_LOSS_AVAILABLE',
+    'CUDA_EXT_AVAILABLE',  # For backward compatibility
 ]
+
+# For backward compatibility
+CUDA_EXT_AVAILABLE = DAF_AVAILABLE
 
 
 def deformable_aggregation_function(

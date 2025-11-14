@@ -1,6 +1,10 @@
 """
-Setup script for compiling deformable aggregation CUDA extension.
-Pure PyTorch CUDA extension without mmcv dependencies.
+Setup script for compiling CUDA extensions for SparseDrive.
+Pure PyTorch CUDA extensions without mmcv dependencies.
+
+Extensions included:
+  - deformable_aggregation_ext: Multi-view feature aggregation
+  - sigmoid_focal_loss_cuda: Focal loss for object detection
 
 To compile and install:
     cd reimplementation/ops
@@ -35,16 +39,35 @@ def get_cuda_arch_flags():
         ]
 
 setup(
-    name='deformable_aggregation',
+    name='sparsedrive_cuda_ops',
     version='1.0.0',
-    description='Deformable aggregation CUDA extension for SparseDrive',
+    description='CUDA extensions for SparseDrive',
     author='SparseDrive Team',
     ext_modules=[
+        # Deformable aggregation extension
         CUDAExtension(
             name='deformable_aggregation_ext',
             sources=[
                 'src/deformable_aggregation.cpp',
                 'src/deformable_aggregation_cuda.cu',
+            ],
+            extra_compile_args={
+                'cxx': ['-O3'],
+                'nvcc': [
+                    '-O3',
+                    '-DCUDA_HAS_FP16=1',
+                    '-D__CUDA_NO_HALF_OPERATORS__',
+                    '-D__CUDA_NO_HALF_CONVERSIONS__',
+                    '-D__CUDA_NO_HALF2_OPERATORS__',
+                ] + get_cuda_arch_flags(),
+            },
+        ),
+        # Sigmoid focal loss extension
+        CUDAExtension(
+            name='sigmoid_focal_loss_cuda',
+            sources=[
+                'src/sigmoid_focal_loss.cpp',
+                'src/sigmoid_focal_loss_cuda.cu',
             ],
             extra_compile_args={
                 'cxx': ['-O3'],

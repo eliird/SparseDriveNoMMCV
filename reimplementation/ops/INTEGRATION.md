@@ -183,6 +183,10 @@ Both paths (CUDA and fallback) are tested:
 python -m reimplementation.models.deformable.deformable_feature_aggregation
 
 # Test with CUDA extension (after compilation)
+export CUDA_HOME=/usr/local/cuda-12.6
+export PATH=$CUDA_HOME/bin:$PATH
+export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+
 cd reimplementation/ops
 python setup.py install
 cd ../..

@@ -1,6 +1,11 @@
-# Deformable Aggregation CUDA Extension
+# SparseDrive CUDA Extensions
 
-This directory contains the CUDA implementation of the deformable aggregation operation used in SparseDrive for efficient multi-view multi-scale feature aggregation.
+This directory contains CUDA implementations of key operations used in SparseDrive for efficient training and inference.
+
+## Available Extensions
+
+1. **Deformable Aggregation**: Multi-view multi-scale feature aggregation
+2. **Sigmoid Focal Loss**: Efficient focal loss computation for object detection
 
 ## What is Deformable Aggregation?
 
@@ -37,10 +42,40 @@ python setup.py develop
 
 ```python
 import torch
-from reimplementation.ops import CUDA_EXT_AVAILABLE, deformable_aggregation_function
+from reimplementation.ops import DAF_AVAILABLE, FOCAL_LOSS_AVAILABLE
 
-print(f"CUDA extension available: {CUDA_EXT_AVAILABLE}")
+print(f"Deformable aggregation CUDA available: {DAF_AVAILABLE}")
+print(f"Focal loss CUDA available: {FOCAL_LOSS_AVAILABLE}")
 ```
+
+## Sigmoid Focal Loss
+
+Sigmoid focal loss is a modified cross-entropy loss that addresses class imbalance in object detection by down-weighting easy examples and focusing on hard negatives.
+
+### Usage
+
+```python
+from reimplementation.models.losses.focal_loss import FocalLoss
+
+# Create focal loss module
+criterion = FocalLoss(
+    use_sigmoid=True,
+    gamma=2.0,        # Focusing parameter
+    alpha=0.25,       # Balance parameter
+    reduction='mean',
+    loss_weight=1.0
+)
+
+# Forward pass
+pred = torch.randn(1000, 10).cuda()  # (N, num_classes)
+target = torch.randint(0, 10, (1000,)).cuda()  # (N,)
+loss = criterion(pred, target)
+```
+
+The CUDA version automatically falls back to PyTorch implementation if:
+- CUDA extension is not compiled
+- Input tensors are on CPU
+- CUDA is not available
 
 ## Usage
 

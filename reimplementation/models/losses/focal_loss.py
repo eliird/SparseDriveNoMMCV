@@ -2,7 +2,13 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from mmcv.ops import sigmoid_focal_loss as _sigmoid_focal_loss
+
+# Try to import CUDA focal loss
+try:
+    from ...ops import sigmoid_focal_loss as _sigmoid_focal_loss, FOCAL_LOSS_AVAILABLE
+except ImportError:
+    _sigmoid_focal_loss = None
+    FOCAL_LOSS_AVAILABLE = False
 
 
 def reduce_loss(loss, reduction):
@@ -110,8 +116,9 @@ def sigmoid_focal_loss(pred,
                        alpha=0.25,
                        reduction='mean',
                        avg_factor=None):
-    r"""A warpper of cuda version `Focal Loss
-    <https://arxiv.org/abs/1708.02002>`_.
+    r"""A wrapper of CUDA version `Focal Loss <https://arxiv.org/abs/1708.02002>`_.
+
+    Falls back to PyTorch version if CUDA extension is not available or input is on CPU.
 
     Args:
         pred (torch.Tensor): The prediction with shape (N, C), C is the number
@@ -127,10 +134,24 @@ def sigmoid_focal_loss(pred,
         avg_factor (int, optional): Average factor that is used to average
             the loss. Defaults to None.
     """
-    # Function.apply does not accept keyword arguments, so the decorator
-    # "weighted_loss" is not applicable
-    loss = _sigmoid_focal_loss(pred.contiguous(), target.contiguous(), gamma,
-                               alpha, None, 'none')
+    # Use CUDA version if available and tensor is on CUDA
+    if FOCAL_LOSS_AVAILABLE and pred.is_cuda and _sigmoid_focal_loss is not None:
+        # Function.apply does not accept keyword arguments, so the decorator
+        # "weighted_loss" is not applicable
+        loss = _sigmoid_focal_loss(pred.contiguous(), target.contiguous(), gamma,
+                                   alpha, None, 'none')
+    else:
+        # Fall back to PyTorch version
+        if not FOCAL_LOSS_AVAILABLE:
+            import warnings
+            warnings.warn(
+                "CUDA focal loss is not available, using PyTorch fallback. "
+                "For better performance, compile CUDA extension: "
+                "cd reimplementation/ops && python setup.py install",
+                UserWarning
+            )
+        return py_sigmoid_focal_loss(pred, target, weight, gamma, alpha, reduction, avg_factor)
+
     if weight is not None:
         if weight.shape != loss.shape:
             if weight.size(0) == loss.size(0):
@@ -228,3 +249,146 @@ class FocalLoss(nn.Module):
         else:
             raise NotImplementedError
         return loss_cls
+
+
+if __name__ == '__main__':
+    print("Testing FocalLoss module...")
+
+    # Test 1: Basic focal loss computation
+    print("\n=== Test 1: Basic focal loss (CPU) ===")
+    criterion = FocalLoss(use_sigmoid=True, gamma=2.0, alpha=0.25, reduction='mean')
+    pred = torch.randn(100, 10)  # (N, num_classes)
+    target = torch.randint(0, 10, (100,))  # (N,)
+    loss = criterion(pred, target)
+    print(f"Input shape: pred={pred.shape}, target={target.shape}")
+    print(f"Loss value: {loss.item():.6f}")
+    print(f"Loss shape: {loss.shape}")
+    assert loss.shape == torch.Size([]), "Loss should be scalar with mean reduction"
+    assert loss.item() >= 0, "Loss should be non-negative"
+    print("✓ Test 1 passed")
+
+    # Test 2: Gradient flow
+    print("\n=== Test 2: Gradient flow ===")
+    pred = torch.randn(50, 5, requires_grad=True)
+    target = torch.randint(0, 5, (50,))
+    criterion = FocalLoss(use_sigmoid=True, gamma=2.0, alpha=0.25, reduction='mean')
+    loss = criterion(pred, target)
+    loss.backward()
+    print(f"Loss: {loss.item():.6f}")
+    print(f"Gradient shape: {pred.grad.shape}")
+    print(f"Gradient norm: {pred.grad.norm().item():.6f}")
+    assert pred.grad is not None, "Gradients should be computed"
+    assert not torch.isnan(pred.grad).any(), "Gradients should not contain NaN"
+    print("✓ Test 2 passed")
+
+    # Test 3: Different reduction modes
+    print("\n=== Test 3: Different reduction modes ===")
+    pred = torch.randn(20, 3)
+    target = torch.randint(0, 3, (20,))
+
+    criterion_none = FocalLoss(use_sigmoid=True, reduction='none')
+    loss_none = criterion_none(pred, target)
+    print(f"Reduction='none': shape={loss_none.shape}, mean={loss_none.mean().item():.6f}")
+    # Focal loss with 'none' reduction returns (N, C) shape (per-sample, per-class loss)
+    assert loss_none.shape == torch.Size([20, 3]), "Loss should have shape (N, C) with none reduction"
+
+    criterion_sum = FocalLoss(use_sigmoid=True, reduction='sum')
+    loss_sum = criterion_sum(pred, target)
+    print(f"Reduction='sum': shape={loss_sum.shape}, value={loss_sum.item():.6f}")
+    assert loss_sum.shape == torch.Size([]), "Loss should be scalar with sum reduction"
+
+    criterion_mean = FocalLoss(use_sigmoid=True, reduction='mean')
+    loss_mean = criterion_mean(pred, target)
+    print(f"Reduction='mean': shape={loss_mean.shape}, value={loss_mean.item():.6f}")
+    assert loss_mean.shape == torch.Size([]), "Loss should be scalar with mean reduction"
+
+    # Verify relationships
+    assert torch.allclose(loss_sum, loss_none.sum(), rtol=1e-5), "Sum reduction should equal sum of none reduction"
+    print("✓ Test 3 passed")
+
+    # Test 4: With sample weights
+    print("\n=== Test 4: With sample weights ===")
+    pred = torch.randn(30, 4)
+    target = torch.randint(0, 4, (30,))
+    weight = torch.rand(30)  # Sample-wise weights
+
+    criterion = FocalLoss(use_sigmoid=True, reduction='mean')
+    loss_weighted = criterion(pred, target, weight=weight)
+    loss_unweighted = criterion(pred, target)
+
+    print(f"Weighted loss: {loss_weighted.item():.6f}")
+    print(f"Unweighted loss: {loss_unweighted.item():.6f}")
+    assert loss_weighted.item() != loss_unweighted.item(), "Weighted and unweighted losses should differ"
+    print("✓ Test 4 passed")
+
+    # Test 5: CUDA version (if available)
+    if torch.cuda.is_available() and FOCAL_LOSS_AVAILABLE:
+        print("\n=== Test 5: CUDA version ===")
+        pred_cuda = torch.randn(100, 10, device='cuda')
+        target_cuda = torch.randint(0, 10, (100,), device='cuda')
+
+        criterion = FocalLoss(use_sigmoid=True, gamma=2.0, alpha=0.25, reduction='mean')
+        loss_cuda = criterion(pred_cuda, target_cuda)
+
+        # Compare with CPU version
+        pred_cpu = pred_cuda.cpu()
+        target_cpu = target_cuda.cpu()
+        loss_cpu = criterion(pred_cpu, target_cpu)
+
+        print(f"CUDA loss: {loss_cuda.item():.6f}")
+        print(f"CPU loss: {loss_cpu.item():.6f}")
+        print(f"Difference: {abs(loss_cuda.item() - loss_cpu.item()):.6e}")
+
+        # Results should be close but may have small numerical differences
+        assert torch.allclose(loss_cuda.cpu(), loss_cpu, rtol=1e-3, atol=1e-5), \
+            "CUDA and CPU versions should produce similar results"
+        print("✓ Test 5 passed (CUDA extension working)")
+    else:
+        if not torch.cuda.is_available():
+            print("\n=== Test 5: CUDA not available, skipping ===")
+        else:
+            print("\n=== Test 5: CUDA focal loss extension not compiled ===")
+            print("Using PyTorch fallback (expect warning above)")
+            pred = torch.randn(100, 10)
+            target = torch.randint(0, 10, (100,))
+            criterion = FocalLoss(use_sigmoid=True, reduction='mean')
+            loss = criterion(pred, target)
+            print(f"Fallback loss: {loss.item():.6f}")
+            print("✓ Test 5 passed (fallback working)")
+
+    # Test 6: Edge cases
+    print("\n=== Test 6: Edge cases ===")
+
+    # All correct predictions (high confidence)
+    pred_correct = torch.zeros(10, 3)
+    target_correct = torch.tensor([0, 1, 2, 0, 1, 2, 0, 1, 2, 0])
+    for i, t in enumerate(target_correct):
+        pred_correct[i, t] = 10.0  # High confidence
+
+    criterion = FocalLoss(use_sigmoid=True, reduction='mean')
+    loss_correct = criterion(pred_correct, target_correct)
+    print(f"Loss for correct predictions: {loss_correct.item():.6f}")
+
+    # All wrong predictions (high confidence)
+    pred_wrong = torch.zeros(10, 3)
+    target_wrong = torch.tensor([0, 1, 2, 0, 1, 2, 0, 1, 2, 0])
+    for i, t in enumerate(target_wrong):
+        wrong_class = (t + 1) % 3
+        pred_wrong[i, wrong_class] = 10.0  # High confidence on wrong class
+
+    loss_wrong = criterion(pred_wrong, target_wrong)
+    print(f"Loss for wrong predictions: {loss_wrong.item():.6f}")
+
+    assert loss_correct < loss_wrong, "Correct predictions should have lower loss"
+    print("✓ Test 6 passed")
+
+    print("\n" + "="*50)
+    print("All FocalLoss tests passed!")
+    print("="*50)
+
+    if FOCAL_LOSS_AVAILABLE:
+        print("\n✓ CUDA focal loss extension is available and working")
+    else:
+        print("\n⚠ CUDA focal loss extension not available, using PyTorch fallback")
+        print("  To enable CUDA acceleration:")
+        print("  cd reimplementation/ops && python setup.py install")

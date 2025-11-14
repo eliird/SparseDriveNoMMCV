@@ -254,9 +254,9 @@ We'll implement in dependency order, starting with the simplest:
 
 ## 📊 Progress Summary
 
-**Completed:** 11 components
+**Completed:** 12 components
 - ✅ ResNet (backbone)
-- ✅ FPN (neck)  
+- ✅ FPN (neck)
 - ✅ DenseDepthNet (depth branch)
 - ✅ ConvModule (common utility)
 - ✅ Model utilities (init functions, checkpoint loading, Scale)
@@ -266,6 +266,7 @@ We'll implement in dependency order, starting with the simplest:
 - ✅ DeformableFeatureAggregation (multi-view feature aggregation)
 - ✅ SparseBox3DKeyPointsGenerator (3D keypoint generation)
 - ✅ SparseBox3DRefinementModule (box refinement)
+- ✅ SparseBox3DTarget (Hungarian matching & denoising)
 
 **Next Priority:** Task heads and their dependencies
 1. Start with simple components: Losses, Encoders
@@ -295,6 +296,7 @@ reimplementation/
 │   │   ├── attention.py                          ✅ Flash attention
 │   │   ├── asym_ffn.py                           ✅ Asymmetric FFN
 │   │   ├── sparse_3d_refinement.py               ✅ Box refinement
+│   │   ├── target.py                             ✅ Target assignment
 │   │   └── box3d.py                              ✅ Box utilities
 │   ├── deformable/
 │   │   ├── __init__.py

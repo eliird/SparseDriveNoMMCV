@@ -6,12 +6,13 @@ import torch.nn as nn
 from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 
-from ..utils import ext_loader
-
-ext_module = ext_loader.load_ext('_ext', [
-    'sigmoid_focal_loss_forward', 'sigmoid_focal_loss_backward',
-    'softmax_focal_loss_forward', 'softmax_focal_loss_backward'
-])
+# Try to import CUDA extension
+try:
+    import sigmoid_focal_loss_cuda as ext_module
+    CUDA_EXT_AVAILABLE = True
+except ImportError:
+    ext_module = None
+    CUDA_EXT_AVAILABLE = False
 
 
 class SigmoidFocalLossFunction(Function):
@@ -44,7 +45,7 @@ class SigmoidFocalLossFunction(Function):
         output = input.new_zeros(input.size())
 
         ext_module.sigmoid_focal_loss_forward(
-            input, target, weight, output, gamma=ctx.gamma, alpha=ctx.alpha)
+            input, target, weight, output, ctx.gamma, ctx.alpha)
         if ctx.reduction == ctx.reduction_dict['mean']:
             output = output.sum() / input.size(0)
         elif ctx.reduction == ctx.reduction_dict['sum']:
@@ -64,8 +65,8 @@ class SigmoidFocalLossFunction(Function):
             target,
             weight,
             grad_input,
-            gamma=ctx.gamma,
-            alpha=ctx.alpha)
+            ctx.gamma,
+            ctx.alpha)
 
         grad_input *= grad_output
         if ctx.reduction == ctx.reduction_dict['mean']:
@@ -145,8 +146,8 @@ class SoftmaxFocalLossFunction(Function):
             target,
             weight,
             output,
-            gamma=ctx.gamma,
-            alpha=ctx.alpha)
+            ctx.gamma,
+            ctx.alpha)
 
         if ctx.reduction == ctx.reduction_dict['mean']:
             output = output.sum() / input.size(0)
@@ -167,8 +168,8 @@ class SoftmaxFocalLossFunction(Function):
             weight,
             buff,
             grad_input,
-            gamma=ctx.gamma,
-            alpha=ctx.alpha)
+            ctx.gamma,
+            ctx.alpha)
 
         grad_input *= grad_output
         if ctx.reduction == ctx.reduction_dict['mean']:
