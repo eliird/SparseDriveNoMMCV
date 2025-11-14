@@ -32,6 +32,13 @@ from ..losses.l1_loss import L1Loss, SmoothL1Loss
 from ..losses.guassian import GaussianFocalLoss
 from ..losses.cross_entropy import CrossEntropyLoss
 
+# Import motion/planning components
+from ..motion.instance_queue import InstanceQueue
+from ..motion.refinement import MotionPlanningRefinementModule
+from ..motion.target import MotionTarget, PlanningTarget
+from ..motion.decoder import SparseBox3DMotionDecoder, HierarchicalPlanningDecoder
+from ..motion.motion_plaaning_head import MotionPlanningHead
+
 
 # Component registry mapping type strings to classes
 COMPONENT_REGISTRY: Dict[str, type] = {
@@ -50,8 +57,10 @@ COMPONENT_REGISTRY: Dict[str, type] = {
 
     # ========== Plugin layers ==========
     'InstanceBank': InstanceBank,
+    'InstanceQueue': InstanceQueue,
     'SparseBox3DRefinementModule': SparseBox3DRefinementModule,
     'SparsePoint3DRefinementModule': SparsePoint3DRefinementModule,
+    'MotionPlanningRefinementModule': MotionPlanningRefinementModule,
     'SparseBox3DKeyPointsGenerator': SparseBox3DKeyPointsGenerator,
     'SparsePoint3DKeyPointsGenerator': SparsePoint3DKeyPointsGenerator,
 
@@ -62,10 +71,14 @@ COMPONENT_REGISTRY: Dict[str, type] = {
     # ========== Samplers/Targets ==========
     'SparseBox3DTarget': SparseBox3DTarget,
     'SparsePoint3DTarget': SparsePoint3DTarget,
+    'MotionTarget': MotionTarget,
+    'PlanningTarget': PlanningTarget,
 
     # ========== Decoders ==========
     'SparseBox3DDecoder': SparseBox3DDecoder,
     'SparsePoint3DDecoder': SparsePoint3DDecoder,
+    'SparseBox3DMotionDecoder': SparseBox3DMotionDecoder,
+    'HierarchicalPlanningDecoder': HierarchicalPlanningDecoder,
 
     # ========== Losses ==========
     'FocalLoss': FocalLoss,
@@ -75,6 +88,9 @@ COMPONENT_REGISTRY: Dict[str, type] = {
     'SmoothL1Loss': SmoothL1Loss,
     'GaussianFocalLoss': GaussianFocalLoss,
     'CrossEntropyLoss': CrossEntropyLoss,
+
+    # ========== Heads ==========
+    'MotionPlanningHead': MotionPlanningHead,
 }
 
 

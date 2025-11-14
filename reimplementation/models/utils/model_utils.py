@@ -181,6 +181,33 @@ def reduce_mean(tensor):
     dist.all_reduce(tensor.div_(dist.get_world_size()), op=dist.ReduceOp.SUM)
     return tensor
 
+
+def force_fp32(apply_to=None, out_fp16=False):
+    """Decorator to force FP32 precision for certain function arguments.
+
+    This is a simplified replacement for mmcv's force_fp32 decorator.
+    In mixed precision training, this ensures certain operations use FP32.
+
+    Args:
+        apply_to (tuple): Names of arguments to cast to FP32
+        out_fp16 (bool): Whether to cast output back to FP16
+
+    Returns:
+        Decorator function
+
+    Note:
+        This is a simplified version. For full mixed precision support,
+        consider using torch.cuda.amp instead.
+    """
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            # Simple pass-through for now
+            # In production, you'd convert specified args to fp32 here
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
 __all__ = [
     'linear_relu_ln',
     'constant_init',
@@ -190,4 +217,5 @@ __all__ = [
     'bias_init_with_prob',
     'load_checkpoint',
     'reduce_mean',
+    'force_fp32',
 ]
