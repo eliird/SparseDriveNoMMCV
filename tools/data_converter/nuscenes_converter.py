@@ -17,8 +17,8 @@ from nuscenes.utils.data_classes import Box
 from nuscenes.utils.geometry_utils import view_points
 from nuscenes.prediction import PredictHelper, convert_local_coords_to_global
 
-from reimplementation.data.nuscmap_extractor import NuscMapExtractor
-from reimplementation.data.data_utils import (
+from reimplementation.dataset.nuscmap_extractor import NuscMapExtractor
+from reimplementation.dataset.data_utils import (
     dump,
     load,
     is_filepath,

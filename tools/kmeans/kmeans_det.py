@@ -5,8 +5,7 @@ from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
-
-import mmcv
+from reimplementation.dataset.data_utils import load
 
 os.makedirs('data/kmeans', exist_ok=True)
 os.makedirs('vis/kmeans', exist_ok=True)
@@ -15,7 +14,7 @@ K = 900
 DIS_THRESH = 55
 
 fp = 'data/infos/nuscenes_infos_train.pkl'
-data = mmcv.load(fp)
+data = load(fp)
 data_infos = list(sorted(data["infos"], key=lambda e: e["timestamp"]))
 center = []
 for idx in tqdm(range(len(data_infos))):

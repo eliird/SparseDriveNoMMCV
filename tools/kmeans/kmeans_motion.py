@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 
-from reimplementation.data.data_utils import load
+from reimplementation.dataset.data_utils import load
 
 CLASSES = [
     "car",
