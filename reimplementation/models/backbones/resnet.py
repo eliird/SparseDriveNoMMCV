@@ -223,8 +223,18 @@ class ResNet(nn.Module):
                  frozen_stages: int = -1,
                  bn_eval: bool = True,
                  bn_frozen: bool = False,
-                 with_cp: bool = False):
+                 with_cp: bool = False,
+                 # MMDet-style parameters (for compatibility)
+                 norm_eval: bool = None,
+                 norm_cfg: dict = None,
+                 pretrained: str = None):
         super().__init__()
+
+        # Handle MMDet-style parameters for compatibility with existing configs
+        if norm_eval is not None:
+            bn_eval = norm_eval
+        # norm_cfg is ignored - we always use BatchNorm2d
+
         if depth not in self.arch_settings:
             raise KeyError(f'invalid depth {depth} for resnet')
         assert num_stages >= 1 and num_stages <= 4
@@ -239,6 +249,7 @@ class ResNet(nn.Module):
         self.bn_eval = bn_eval
         self.bn_frozen = bn_frozen
         self.with_cp = with_cp
+        self.pretrained = pretrained
 
         self.inplanes: int = 64
         self.conv1 = nn.Conv2d(
@@ -268,6 +279,9 @@ class ResNet(nn.Module):
 
         self.feat_dim = block.expansion * 64 * 2**(  # type: ignore
             len(stage_blocks) - 1)
+
+        # Initialize weights (load pretrained if provided)
+        self.init_weights(pretrained=self.pretrained)
 
     def init_weights(self, pretrained: Optional[str] = None) -> None:
         if isinstance(pretrained, str):

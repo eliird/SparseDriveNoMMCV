@@ -6,6 +6,7 @@ Provides build_dataset and build_dataloader functions that accept config diction
 
 from torch.utils.data import DataLoader, DistributedSampler
 from .nuscenes_3d_dataset import NuScenes3DDataset
+from .collate import sparse_drive_collate
 
 
 DATASETS = {
@@ -123,6 +124,7 @@ def build_dataloader(
         'dataset': dataset,
         'batch_size': samples_per_gpu,
         'num_workers': workers_per_gpu,
+        'collate_fn': sparse_drive_collate,  # Custom collate for variable-length data
         'pin_memory': pin_memory,
         'shuffle': shuffle if sampler is None else False,
         'sampler': sampler,
@@ -133,7 +135,7 @@ def build_dataloader(
     if workers_per_gpu > 0:
         init_kwargs['persistent_workers'] = persistent_workers
 
-    # Add any additional kwargs
+    # Add any additional kwargs (can override collate_fn if needed)
     init_kwargs.update(kwargs)
 
     # Create DataLoader
