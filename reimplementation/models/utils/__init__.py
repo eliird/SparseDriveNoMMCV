@@ -10,6 +10,7 @@ from .model_utils import (
     load_checkpoint,
     Scale
 )
+from .builders import build_from_cfg, register_component, COMPONENT_REGISTRY
 
 __all__ = [
     'constant_init',
@@ -17,5 +18,8 @@ __all__ = [
     'xavier_init',
     'normal_init',
     'load_checkpoint',
-    'Scale'
+    'Scale',
+    'build_from_cfg',
+    'register_component',
+    'COMPONENT_REGISTRY',
 ]

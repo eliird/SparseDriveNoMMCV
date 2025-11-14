@@ -2,4 +2,8 @@
 Task-specific prediction heads.
 """
 
-__all__ = []
+from .sparse_4d import Sparse4DHead
+
+__all__ = [
+    'Sparse4DHead',
+]

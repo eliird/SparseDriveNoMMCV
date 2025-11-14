@@ -115,11 +115,19 @@ class DeformableFeatureAggregation(nn.Module):
 
         kps_cfg = kps_generator.copy()
         kps_type = kps_cfg.pop('type', 'SparseBox3DKeyPointsGenerator')
-        if kps_type != 'SparseBox3DKeyPointsGenerator':
-            raise ValueError(f"Only SparseBox3DKeyPointsGenerator is supported, got {kps_type}")
 
-        kps_cfg['embed_dims'] = embed_dims
-        self.kps_generator = SparseBox3DKeyPointsGenerator(**kps_cfg)
+        # Support both box and point keypoint generators
+        if kps_type == 'SparseBox3DKeyPointsGenerator':
+            from .sparse_box_3d_key_point_gen import SparseBox3DKeyPointsGenerator
+            kps_cfg['embed_dims'] = embed_dims
+            self.kps_generator = SparseBox3DKeyPointsGenerator(**kps_cfg)
+        elif kps_type == 'SparsePoint3DKeyPointsGenerator':
+            from .sparse_point_3d_key_point_gen import SparsePoint3DKeyPointsGenerator
+            kps_cfg['embed_dims'] = embed_dims
+            self.kps_generator = SparsePoint3DKeyPointsGenerator(**kps_cfg)
+        else:
+            raise ValueError(f"Unsupported keypoint generator type: {kps_type}")
+
         self.num_pts = self.kps_generator.num_pts
 
         # Build temporal fusion module (if provided) #TODO different from original

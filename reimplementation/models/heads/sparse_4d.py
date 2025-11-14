@@ -5,9 +5,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from mmcv.runner import BaseModule, force_fp32
-from mmcv.utils import build_from_cfg
 from ..utils.model_utils import reduce_mean
+from ..utils.builders import build_from_cfg
 
 from ..deformable import DeformableFeatureAggregation as DFG
 __all__ = ["Sparse4DHead"]
@@ -40,10 +39,9 @@ class Sparse4DHead(nn.Module):
         cls_threshold_to_reg: float = -1,
         dn_loss_weight: float = 5.0,
         decouple_attn: bool = True,
-        init_cfg: dict = None,
         **kwargs,
     ):
-        super(Sparse4DHead, self).__init__(init_cfg)
+        super(Sparse4DHead, self).__init__()
         self.num_decoder = num_decoder
         self.num_single_frame_decoder = num_single_frame_decoder
         self.gt_cls_key = gt_cls_key
@@ -76,24 +74,24 @@ class Sparse4DHead(nn.Module):
         self.operation_order = operation_order
 
         # =========== build modules ===========
-        def build(cfg, registry):
+        def build(cfg, registry=None):
             if cfg is None:
                 return None
             return build_from_cfg(cfg, registry)
 
-        self.instance_bank = build(instance_bank, PLUGIN_LAYERS)
-        self.anchor_encoder = build(anchor_encoder, POSITIONAL_ENCODING)
-        self.sampler = build(sampler, BBOX_SAMPLERS)
-        self.decoder = build(decoder, BBOX_CODERS)
-        self.loss_cls = build(loss_cls, LOSSES)
-        self.loss_reg = build(loss_reg, LOSSES)
+        self.instance_bank = build(instance_bank)
+        self.anchor_encoder = build(anchor_encoder)
+        self.sampler = build(sampler)
+        self.decoder = build(decoder)
+        self.loss_cls = build(loss_cls)
+        self.loss_reg = build(loss_reg)
         self.op_config_map = {
-            "temp_gnn": [temp_graph_model, ATTENTION],
-            "gnn": [graph_model, ATTENTION],
-            "norm": [norm_layer, NORM_LAYERS],
-            "ffn": [ffn, FEEDFORWARD_NETWORK],
-            "deformable": [deformable_model, ATTENTION],
-            "refine": [refine_layer, PLUGIN_LAYERS],
+            "temp_gnn": [temp_graph_model, None],
+            "gnn": [graph_model, None],
+            "norm": [norm_layer, None],
+            "ffn": [ffn, None],
+            "deformable": [deformable_model, None],
+            "refine": [refine_layer, None],
         }
         self.layers = nn.ModuleList(
             [
@@ -398,7 +396,6 @@ class Sparse4DHead(nn.Module):
             output["instance_id"] = instance_id
         return output
 
-    @force_fp32(apply_to=("model_outs"))
     def loss(self, model_outs, data, feature_maps=None):
         # ===================== prediction losses ======================
         cls_scores = model_outs["classification"]
@@ -535,7 +532,6 @@ class Sparse4DHead(nn.Module):
             num_dn_pos,
         )
 
-    @force_fp32(apply_to=("model_outs"))
     def post_process(self, model_outs, output_idx=-1):
         return self.decoder.decode(
             model_outs["classification"],
