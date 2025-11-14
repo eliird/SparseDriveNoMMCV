@@ -10,9 +10,7 @@ import numpy as np
 from numpy.typing import NDArray
 from shapely.geometry import LineString
 
-import mmcv
-from mmcv import Config
-from mmdet.datasets import build_dataset, build_dataloader
+from .builder import build_dataset, build_dataloader
 
 from .AP import instance_match, average_precision
 
@@ -28,7 +26,7 @@ class VectorEvaluate(object):
         n_workers (int): num workers to parallel
     """
 
-    def __init__(self, dataset_cfg: Config, n_workers: int=N_WORKERS) -> None:
+    def __init__(self, dataset_cfg: dict, n_workers: int=N_WORKERS) -> None:
         self.dataset = build_dataset(dataset_cfg)
         self.dataloader = build_dataloader(
             self.dataset, samples_per_gpu=1, workers_per_gpu=n_workers, shuffle=False, dist=False)
