@@ -108,7 +108,10 @@
   - CUDA extension with PyTorch fallback
   - Test: `python -m reimplementation.models.losses.focal_loss`
 - [ ] **SparseBox3DLoss** (line 258)
-  - [ ] **L1Loss** (line 259)
+  - [x] **L1Loss & SmoothL1Loss** (line 259)
+    - Removed mmcv dependencies
+    - Pure PyTorch implementation
+    - Test: `python -m reimplementation.models.losses.l1_loss`
   - [ ] **CrossEntropyLoss** (line 260)
   - [ ] **GaussianFocalLoss** (line 261)
 
@@ -256,7 +259,7 @@ We'll implement in dependency order, starting with the simplest:
 
 ## 📊 Progress Summary
 
-**Completed:** 13 components
+**Completed:** 14 components
 - ✅ ResNet (backbone)
 - ✅ FPN (neck)
 - ✅ DenseDepthNet (depth branch)
@@ -270,6 +273,7 @@ We'll implement in dependency order, starting with the simplest:
 - ✅ SparseBox3DRefinementModule (box refinement)
 - ✅ SparseBox3DTarget (Hungarian matching & denoising)
 - ✅ FocalLoss (CUDA extension with PyTorch fallback)
+- ✅ L1Loss & SmoothL1Loss (pure PyTorch)
 
 **Next Priority:** Task heads and their dependencies
 1. Start with simple components: Losses, Encoders
@@ -303,7 +307,8 @@ reimplementation/
 │   │   └── box3d.py                              ✅ Box utilities
 │   ├── losses/
 │   │   ├── __init__.py
-│   │   └── focal_loss.py                         ✅ Focal loss (CUDA + fallback)
+│   │   ├── focal_loss.py                         ✅ Focal loss (CUDA + fallback)
+│   │   └── l1_loss.py                            ✅ L1 & Smooth L1 loss
 │   ├── deformable/
 │   │   ├── __init__.py
 │   │   ├── deformable_feature_aggregation.py     ✅ Multi-view aggregation
@@ -332,7 +337,7 @@ reimplementation/
 ## 🎯 Next Steps
 
 **Recommended order:**
-1. **Simple Losses** - L1Loss, CrossEntropyLoss, GaussianFocalLoss (no dependencies)
+1. **Simple Losses** - CrossEntropyLoss, GaussianFocalLoss (no dependencies)
 2. **InstanceBank** - Core component for detection/map heads
 3. **Encoders** - SparsePoint3DEncoder (for map head)
 4. **Sparse4DHead** - Detection head
