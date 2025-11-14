@@ -44,16 +44,35 @@ class FlashAttention(nn.Module):
         self.softmax_scale = softmax_scale
         self.dropout_p = attention_dropout
 
-    def forward(self, q, kv, 
-                causal=False, 
+    def forward(self, q, kv,
+                causal=False,
                 key_padding_mask=None):
         """Implements the multihead softmax attention.
         Arguments
         ---------
-            q: The tensor containing the query. (B, T, H, D) 
-            kv: The tensor containing the key, and value. (B, S, 2, H, D) 
+            q: The tensor containing the query. (B, T, H, D)
+            kv: The tensor containing the key, and value. (B, S, 2, H, D)
             key_padding_mask: a bool tensor of shape (B, S)
         """
+        # Flash attention requires CUDA tensors
+        if not q.is_cuda:
+            if torch.cuda.is_available():
+                q = q.cuda()
+                kv = kv.cuda()
+                if key_padding_mask is not None and not key_padding_mask.is_cuda:
+                    key_padding_mask = key_padding_mask.cuda()
+            else:
+                raise RuntimeError("Flash attention requires CUDA but CUDA is not available. "
+                                   "Please run on GPU or use regular attention instead.")
+
+        # Auto-convert fp32 to fp16/bfloat16 for flash attention
+        original_dtype = q.dtype
+        if q.dtype not in [torch.float16, torch.bfloat16]:
+            # Prefer bfloat16 if available, otherwise fp16
+            target_dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+            q = q.to(target_dtype)
+            kv = kv.to(target_dtype)
+
         assert q.dtype in [torch.float16, torch.bfloat16] and kv.dtype in [torch.float16, torch.bfloat16]
         assert q.is_cuda and kv.is_cuda
         assert q.shape[0] == kv.shape[0] and q.shape[-2] == kv.shape[-2] and q.shape[-1] == kv.shape[-1]
@@ -88,6 +107,10 @@ class FlashAttention(nn.Module):
                 softmax_scale=self.softmax_scale, causal=causal
             )
             output = rearrange(output_unpad, '(b s) ... -> b s ...', b=batch_size)
+
+        # Convert back to original dtype if needed
+        if output.dtype != original_dtype:
+            output = output.to(original_dtype)
 
         return output, None
 

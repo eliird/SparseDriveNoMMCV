@@ -12,8 +12,23 @@ from typing import Dict, Any, Optional, Callable
 def _get_component_class(module_type: str):
     """Lazy import and return component class to avoid circular imports."""
 
+    # ========== Backbones ==========
+    if module_type == 'ResNet':
+        from ..backbones.resnet import ResNet
+        return ResNet
+
+    # ========== Necks ==========
+    elif module_type == 'FPN':
+        from ..necks.fpn import FPN
+        return FPN
+
+    # ========== Depth networks ==========
+    elif module_type == 'DenseDepthNet':
+        from ..depth.dense_depth import DenseDepthNet
+        return DenseDepthNet
+
     # ========== Normalization layers ==========
-    if module_type in ['LN', 'LayerNorm']:
+    elif module_type in ['LN', 'LayerNorm']:
         return nn.LayerNorm
 
     # ========== Attention modules ==========

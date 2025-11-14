@@ -185,10 +185,17 @@ class Sparse4DHead(nn.Module):
         temp_dn_reg_target = None
         if self.training and hasattr(self.sampler, "get_dn_anchors"):
             if self.gt_id_key in metas["img_metas"][0]:
-                gt_instance_id = [
-                    torch.from_numpy(x[self.gt_id_key]).cuda()
-                    for x in metas["img_metas"]
-                ]
+                gt_instance_id = []
+                for x in metas["img_metas"]:
+                    id_val = x[self.gt_id_key]
+                    # Handle both numpy arrays and tensors
+                    if isinstance(id_val, torch.Tensor):
+                        # Already a tensor, just ensure it's on cuda
+                        id_tensor = id_val.cuda() if not id_val.is_cuda else id_val
+                    else:
+                        # Numpy array, convert to tensor
+                        id_tensor = torch.from_numpy(id_val).cuda()
+                    gt_instance_id.append(id_tensor)
             else:
                 gt_instance_id = None
             dn_metas = self.sampler.get_dn_anchors(

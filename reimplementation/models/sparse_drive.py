@@ -86,14 +86,18 @@ class SparseDrive(nn.Module):
             feature_maps = self.img_backbone(img)
         if self.img_neck is not None:
             feature_maps = list(self.img_neck(feature_maps))
-        for i, feat in enumerate(feature_maps):
-            feature_maps[i] = torch.reshape(
-                feat, (bs, num_cams) + feat.shape[1:]
-            )
+
+        # Compute depth before reshaping (depth branch expects [B*N, C, H, W])
         if return_depth and self.depth_branch is not None:
             depths = self.depth_branch(feature_maps, metas.get("focal"))
         else:
             depths = None
+
+        # Reshape features to [B, N, C, H, W] for the rest of the pipeline
+        for i, feat in enumerate(feature_maps):
+            feature_maps[i] = torch.reshape(
+                feat, (bs, num_cams) + feat.shape[1:]
+            )
         if self.use_deformable_func:
             feature_maps = feature_maps_format(feature_maps)
         if return_depth:

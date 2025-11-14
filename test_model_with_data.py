@@ -191,12 +191,12 @@ model_config = dict(
         depth=50,
         num_stages=4,
         frozen_stages=-1,
-        norm_eval=False,
+        bn_eval=False,  # Use bn_eval instead of norm_eval
+        bn_frozen=False,
         style="pytorch",
         with_cp=True,
         out_indices=(0, 1, 2, 3),
-        norm_cfg=dict(type="BN", requires_grad=True),
-        pretrained=None,  # Set to None for testing without pretrained weights
+        # Note: norm_cfg and pretrained are not supported in this ResNet implementation
     ),
     img_neck=dict(
         type="FPN",
@@ -471,6 +471,13 @@ try:
     model = SparseDrive(**config)
     model.train()  # Set to training mode
 
+    # Move model to CUDA if available
+    if torch.cuda.is_available():
+        model = model.cuda()
+        print(f"✓ Model moved to CUDA")
+    else:
+        print(f"⚠ CUDA not available, running on CPU")
+
     print(f"✓ SparseDrive model instantiated successfully")
     print(f"  - Has backbone: {hasattr(model, 'img_backbone')}")
     print(f"  - Has neck: {hasattr(model, 'img_neck')}")
@@ -515,14 +522,39 @@ try:
         else:
             print(f"    - {key}: type {type(batch[key])}")
 
+    # Move batch to CUDA if available
+    if torch.cuda.is_available():
+        print(f"\n  Moving batch to CUDA...")
+        for key in batch.keys():
+            if isinstance(batch[key], torch.Tensor):
+                batch[key] = batch[key].cuda()
+            elif isinstance(batch[key], list):
+                batch[key] = [item.cuda() if isinstance(item, torch.Tensor) else item for item in batch[key]]
+        print(f"  ✓ Batch moved to CUDA")
+
     # Forward pass
     print(f"\nRunning forward pass...")
+
+    # Debug: Check img_metas structure
+    print(f"\n  Debug: Checking img_metas structure...")
+    img_metas = batch['img_metas']
+    print(f"    - Type: {type(img_metas)}")
+    if isinstance(img_metas, dict):
+        print(f"    - Keys: {list(img_metas.keys())}")
+        print(f"    - It's a dict, needs to be wrapped in a list for batch processing")
+        img_metas = [img_metas]
+    elif isinstance(img_metas, list):
+        print(f"    - Length: {len(img_metas)}")
+        if len(img_metas) > 0:
+            print(f"    - First element type: {type(img_metas[0])}")
+            if isinstance(img_metas[0], dict):
+                print(f"    - First element keys: {list(img_metas[0].keys())}")
 
     # Prepare inputs for model.forward_train
     # The model expects: forward_train(img, img_metas, **kwargs)
     outputs = model.forward_train(
         img=batch['img'],
-        img_metas=batch['img_metas'],
+        img_metas=img_metas,  # Use the processed img_metas (wrapped in list if needed)
         gt_bboxes_3d=batch['gt_bboxes_3d'],
         gt_labels_3d=batch['gt_labels_3d'],
         gt_map_labels=batch['gt_map_labels'],
