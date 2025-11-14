@@ -28,6 +28,11 @@ ln -s path/to/nuscenes ./data/nuscenes
 
 # preprocess the dataset 
 bash scripts/create_data.sh
+
+python tools/kmeans/kmeans_map.py
+python tools/kmeans/kmeans_det.py
+python tools/kmeans/kmeans_plan.py
+python tools/kmeans/kmeans_motion.py
 ```
 
 ## Run the Training Script
