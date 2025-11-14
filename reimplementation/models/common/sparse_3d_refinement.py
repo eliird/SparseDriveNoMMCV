@@ -3,6 +3,59 @@ import torch.nn as nn
 from .box3d import *
 from ..utils.model_utils import linear_relu_ln, bias_init_with_prob, Scale
 
+
+class SparsePoint3DRefinementModule(nn.Module):
+    def __init__(
+        self,
+        embed_dims: int = 256,
+        num_sample: int = 20,
+        coords_dim: int = 2,
+        num_cls: int = 3,
+        with_cls_branch: bool = True,
+    ):
+        super(SparsePoint3DRefinementModule, self).__init__()
+        self.embed_dims = embed_dims
+        self.num_sample = num_sample
+        self.output_dim = num_sample * coords_dim
+        self.num_cls = num_cls
+
+        self.layers = nn.Sequential(
+            *linear_relu_ln(embed_dims, 2, 2),
+            nn.Linear(self.embed_dims, self.output_dim),
+            Scale([1.0] * self.output_dim),
+        )
+
+        self.with_cls_branch = with_cls_branch
+        if with_cls_branch:
+            self.cls_layers = nn.Sequential(
+                *linear_relu_ln(embed_dims, 1, 2),
+                nn.Linear(self.embed_dims, self.num_cls),
+            )
+
+    def init_weight(self):
+        if self.with_cls_branch:
+            bias_init = bias_init_with_prob(0.01)
+            nn.init.constant_(self.cls_layers[-1].bias, bias_init)
+
+    def forward(
+        self,
+        instance_feature: torch.Tensor,
+        anchor: torch.Tensor,
+        anchor_embed: torch.Tensor,
+        time_interval: torch.Tensor = 1.0,
+        return_cls=True,
+    ):
+        output = self.layers(instance_feature + anchor_embed)
+        output = output + anchor
+        if return_cls:
+            assert self.with_cls_branch, "Without classification layers !!!"
+            cls = self.cls_layers(instance_feature)  ## NOTE anchor embed?
+        else:
+            cls = None
+        qt = None
+        return output, cls, qt
+    
+
 class SparseBox3DRefinementModule(nn.Module):
     """3D bounding box refinement module for sparse detection.
     

@@ -307,7 +307,130 @@ def gen_sineembed_for_position(pos_tensor, hidden_dim=256):
     return pos
 
 
-__all__ = ['MultiheadFlashAttention', 'gen_sineembed_for_position']
+import torch
+import torch.nn as nn
+import warnings
+from functools import partial
+
+
+def scaled_dot_product_attention_torch(q, k, v, scale=None, dropout_p=0.0):
+    """
+    Pure PyTorch scaled dot-product attention.
+    Mirrors torch.nn.functional.scaled_dot_product_attention,
+    but implemented explicitly for full control.
+    """
+    B, num_heads, N, head_dim = q.shape
+
+    # (B, heads, N, N)
+    attn = torch.matmul(q, k.transpose(-2, -1))
+    if scale is not None:
+        attn = attn * scale
+
+    attn = attn.softmax(dim=-1)
+
+    if dropout_p > 0:
+        attn = nn.functional.dropout(attn, p=dropout_p)
+
+    # (B, heads, N, head_dim)
+    out = torch.matmul(attn, v)
+    return out
+
+
+class LayerScale(nn.Module):
+    """Simple LayerScale implementation."""
+    def __init__(self, dim, layer_scale_init_value=1e-5):
+        super().__init__()
+        self.gamma = nn.Parameter(layer_scale_init_value * torch.ones(dim))
+
+    def forward(self, x):
+        return x * self.gamma
+
+
+class MultiheadAttention(nn.Module):
+    """
+    Pure-PyTorch rewrite of MMCV MultiheadAttention
+    without any MMCV dependency.
+    """
+
+    def __init__(self,
+                 embed_dims,
+                 num_heads,
+                 input_dims=None,
+                 attn_drop=0.,
+                 proj_drop=0.,
+                 dropout_layer=None,
+                 qkv_bias=True,
+                 qk_scale=None,
+                 proj_bias=True,
+                 v_shortcut=False,
+                 use_layer_scale=False,
+                 layer_scale_init_value=0.,
+                 init_cfg=None):
+
+        super().__init__()
+
+        self.input_dims = input_dims or embed_dims
+        self.embed_dims = embed_dims
+        self.num_heads = num_heads
+        self.v_shortcut = v_shortcut
+
+        self.head_dims = embed_dims // num_heads
+        scale = qk_scale or (self.head_dims ** -0.5)
+
+        # choose attention implementation
+        self.scaled_dot_product_attention = partial(
+            scaled_dot_product_attention_torch,
+            scale=scale
+        )
+
+        # qkv projection
+        self.qkv = nn.Linear(self.input_dims, embed_dims * 3, bias=qkv_bias)
+
+        self.attn_drop = attn_drop
+
+        # output projection
+        self.proj = nn.Linear(embed_dims, embed_dims, bias=proj_bias)
+        self.proj_drop = nn.Dropout(proj_drop)
+
+        # dropout before residual connection
+        self.out_drop = nn.Dropout(dropout_layer.get("drop_prob", 0.)
+                                   if isinstance(dropout_layer, dict)
+                                   else 0.)
+
+        # layer scale
+        if use_layer_scale or (layer_scale_init_value > 0):
+            layer_scale_init_value = layer_scale_init_value or 1e-5
+            self.gamma1 = LayerScale(embed_dims, layer_scale_init_value)
+        else:
+            self.gamma1 = nn.Identity()
+
+    def forward(self, x):
+        B, N, _ = x.shape
+
+        # qkv projection
+        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.head_dims)
+        qkv = qkv.permute(2, 0, 3, 1, 4)  # (3, B, heads, N, head_dim)
+        q, k, v = qkv[0], qkv[1], qkv[2]
+
+        # attention
+        attn_drop = self.attn_drop if self.training else 0.
+        x = self.scaled_dot_product_attention(q, k, v, dropout_p=attn_drop)
+
+        # merge heads
+        x = x.transpose(1, 2).reshape(B, N, self.embed_dims)
+
+        # output projection + layer scale + dropout
+        x = self.proj(x)
+        x = self.out_drop(self.gamma1(self.proj_drop(x)))
+
+        # optional v-shortcut
+        if self.v_shortcut:
+            x = v.mean(1) + x  # v: (B, heads, N, head_dim)
+
+        return x
+
+
+__all__ = ['MultiheadFlashAttention', 'gen_sineembed_for_position', 'MultiheadAttention']
 
 
 def test_multihead_flash_attention():
