@@ -37,6 +37,15 @@ fp16 = None  # Legacy FP16 config (use 'precision' instead)
 # - bf16: BFloat16 (fast, good for large losses, no scaling needed)
 precision = 'bf16'  # Recommended for SparseDrive (handles large losses well)
 
+# Model compilation settings (PyTorch 2.0+)
+# Note: Custom CUDA ops may not be compatible with compilation
+compile_model = True  # Set to True to try torch.compile (experimental)
+compile_config = dict(
+    mode='reduce-overhead',  # 'default', 'reduce-overhead', 'max-autotune'
+    fullgraph=False,  # Allow graph breaks for custom ops
+    dynamic=True,     # Support dynamic shapes
+)
+
 input_shape = (704, 256)
 
 
@@ -689,7 +698,7 @@ data = dict(
 # ================== training ========================
 optimizer = dict(
     type="AdamW",
-    lr=4e-4,
+    lr=8e-4,
     weight_decay=0.001,
     paramwise_cfg=dict(
         custom_keys={

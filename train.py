@@ -159,6 +159,28 @@ def main():
     if torch.cuda.is_available():
         model = model.cuda()
 
+    # Compile model if requested (PyTorch 2.0+)
+    compile_model = getattr(cfg, 'compile_model', False)
+    if compile_model:
+        compile_config = getattr(cfg, 'compile_config', {})
+        if rank == 0:
+            print(f"\n{'='*80}")
+            print(f"Attempting to compile model with torch.compile")
+            print(f"  Mode: {compile_config.get('mode', 'default')}")
+            print(f"  Fullgraph: {compile_config.get('fullgraph', False)}")
+            print(f"  Dynamic: {compile_config.get('dynamic', True)}")
+            print(f"  Note: Custom CUDA ops may cause compilation to fall back")
+            print(f"{'='*80}\n")
+
+        try:
+            model = torch.compile(model, **compile_config)
+            if rank == 0:
+                print("✓ Model compiled successfully!")
+        except Exception as e:
+            if rank == 0:
+                print(f"⚠ Model compilation failed: {e}")
+                print("  Continuing with uncompiled model...")
+
     # Wrap model with DistributedDataParallel for multi-GPU training
     if args.launcher != 'none':
         model = torch.nn.parallel.DistributedDataParallel(
