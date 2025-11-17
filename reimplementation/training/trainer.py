@@ -50,6 +50,7 @@ class Trainer:
         max_epochs: int = 100,
         grad_clip_config: Optional[Dict[str, Any]] = None,
         fp16_config: Optional[Dict[str, Any]] = None,
+        precision: str = 'fp32',  # 'fp32', 'fp16', or 'bf16'
         checkpoint_interval: int = 20,
         rank: int = 0,
         max_iters: Optional[int] = None
@@ -68,15 +69,36 @@ class Trainer:
         self.max_iters = max_iters
         self.iters_per_epoch = len(train_loader)
 
-        # FP16 setup
-        self.use_fp16 = len(self.fp16_config) > 0
+        # Determine precision mode
+        # Priority: explicit precision arg > fp16_config (backward compat)
+        if precision != 'fp32':
+            self.precision = precision
+        elif len(self.fp16_config) > 0:
+            self.precision = 'fp16'  # Backward compatibility
+        else:
+            self.precision = 'fp32'
+
+        # Validate precision mode
+        assert self.precision in ['fp32', 'fp16', 'bf16'], \
+            f"Invalid precision mode: {self.precision}. Must be 'fp32', 'fp16', or 'bf16'"
+
+        # Mixed precision setup
+        self.use_fp16 = (self.precision == 'fp16')
+        self.use_bf16 = (self.precision == 'bf16')
+        self.use_amp = self.use_fp16 or self.use_bf16
+
         if self.use_fp16:
             init_scale = self.fp16_config.get('loss_scale', 512.0)
             self.scaler = GradScaler(init_scale=init_scale)
             if rank == 0:
-                print(f"Using FP16 training with initial loss scale: {init_scale}")
+                print(f"Precision mode: FP16 (loss_scale={init_scale})")
         else:
             self.scaler = None
+            if rank == 0:
+                if self.use_bf16:
+                    print("Precision mode: BF16 (no gradient scaling needed)")
+                else:
+                    print("Precision mode: FP32")
 
         # Gradient clipping setup
         self.max_norm = self.grad_clip_config.get('max_norm', None)
@@ -135,20 +157,21 @@ class Trainer:
             if isinstance(img_metas, dict):
                 img_metas = [img_metas]
 
-            # Forward pass
-            # with autocast(device_type='cuda', enabled=self.use_fp16):
-            losses = self.get_model().forward_train(
-                img=batch['img'],
-                img_metas=img_metas,
-                gt_bboxes_3d=batch.get('gt_bboxes_3d'),
-                gt_labels_3d=batch.get('gt_labels_3d'),
-                gt_map_labels=batch.get('gt_map_labels'),
-                gt_map_pts=batch.get('gt_map_pts'),
-                timestamp=batch.get('timestamp'),
-                projection_mat=batch.get('projection_mat'),
-                image_wh=batch.get('image_wh'),
-                gt_depth=batch.get('gt_depth'),
-                focal=batch.get('focal'),
+            # Forward pass with mixed precision
+            amp_dtype = torch.bfloat16 if self.use_bf16 else torch.float16
+            with autocast(device_type='cuda', enabled=self.use_amp, dtype=amp_dtype):
+                losses = self.get_model().forward_train(
+                    img=batch['img'],
+                    img_metas=img_metas,
+                    gt_bboxes_3d=batch.get('gt_bboxes_3d'),
+                    gt_labels_3d=batch.get('gt_labels_3d'),
+                    gt_map_labels=batch.get('gt_map_labels'),
+                    gt_map_pts=batch.get('gt_map_pts'),
+                    timestamp=batch.get('timestamp'),
+                    projection_mat=batch.get('projection_mat'),
+                    image_wh=batch.get('image_wh'),
+                    gt_depth=batch.get('gt_depth'),
+                    focal=batch.get('focal'),
             )
 
             # Calculate total loss
@@ -179,7 +202,6 @@ class Trainer:
                             if param_norm < 1e-10:
                                 zero_grads += 1
                     total_grad_norm = total_grad_norm ** 0.5
-                    print(f"[DEBUG] Iter {self.current_iter}: grad_norm={total_grad_norm:.6f}, params_with_grad={num_grads}, zero_grads={zero_grads}, loss_scale={self.scaler.get_scale()}")
 
                 # Gradient clipping
                 if self.max_norm is not None:
@@ -209,7 +231,6 @@ class Trainer:
                             if param_norm < 1e-10:
                                 zero_grads += 1
                     total_grad_norm = total_grad_norm ** 0.5
-                    print(f"[DEBUG] Iter {self.current_iter}: grad_norm={total_grad_norm:.6f}, params_with_grad={num_grads}, zero_grads={zero_grads}")
 
                 # Gradient clipping
                 if self.max_norm is not None:

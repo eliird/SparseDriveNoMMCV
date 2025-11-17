@@ -243,6 +243,7 @@ def main():
     checkpoint_interval = getattr(cfg, 'checkpoint_epoch_interval', 20)
     grad_clip_config = getattr(cfg, 'optimizer_config', {})
     fp16_config = getattr(cfg, 'fp16', {})
+    precision = getattr(cfg, 'precision', 'fp32')  # Default to fp32 if not specified
 
     trainer = Trainer(
         model=model,
@@ -254,6 +255,7 @@ def main():
         max_epochs=max_epochs,
         grad_clip_config=grad_clip_config,
         fp16_config=fp16_config,
+        precision=precision,
         checkpoint_interval=checkpoint_interval,
         rank=rank,
         max_iters=max_iters

@@ -20,7 +20,7 @@ checkpoint_config = dict(
     interval=num_iters_per_epoch * checkpoint_epoch_interval
 )
 log_config = dict(
-    interval=50,  # Log every iteration for quick verification (was 51)
+    interval=5,  # Log every iteration for quick verification (was 51)
     hooks=[
         dict(type="TextLoggerHook", by_epoch=False),
         dict(type="TensorboardLoggerHook"),
@@ -29,7 +29,14 @@ log_config = dict(
 load_from = None
 resume_from = None
 workflow = [("train", 1)]
-fp16 = dict(loss_scale=32.0) # is disabled model always trains in fp32, fp16 loss not converging. (maybe the scale is the issue)
+fp16 = None  # Legacy FP16 config (use 'precision' instead)
+
+# Precision mode: 'fp32', 'fp16', or 'bf16'
+# - fp32: Standard floating point (slowest, most stable)
+# - fp16: Half precision with gradient scaling (fastest, needs tuning)
+# - bf16: BFloat16 (fast, good for large losses, no scaling needed)
+precision = 'bf16'  # Recommended for SparseDrive (handles large losses well)
+
 input_shape = (704, 256)
 
 

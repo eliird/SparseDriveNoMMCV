@@ -134,8 +134,14 @@ def sigmoid_focal_loss(pred,
         avg_factor (int, optional): Average factor that is used to average
             the loss. Defaults to None.
     """
-    # Use CUDA version if available and tensor is on CUDA
-    if FOCAL_LOSS_AVAILABLE and pred.is_cuda and _sigmoid_focal_loss is not None:
+    # Check if we can use CUDA version
+    # CUDA kernel doesn't support BFloat16, so fall back for bfloat16
+    use_cuda = (FOCAL_LOSS_AVAILABLE and
+                pred.is_cuda and
+                _sigmoid_focal_loss is not None and
+                pred.dtype != torch.bfloat16)
+
+    if use_cuda:
         # Function.apply does not accept keyword arguments, so the decorator
         # "weighted_loss" is not applicable
         loss = _sigmoid_focal_loss(pred.contiguous(), target.contiguous(), gamma,
@@ -150,6 +156,24 @@ def sigmoid_focal_loss(pred,
                 "cd reimplementation/ops && python setup.py install",
                 UserWarning
             )
+        elif pred.dtype == torch.bfloat16:
+            # Note: Using PyTorch fallback for BFloat16 (CUDA kernel doesn't support it)
+            pass
+
+        # PyTorch fallback expects one-hot encoded targets
+        # CUDA version uses class indices, so convert if needed
+        if target.dtype == torch.long and target.dim() == 1:
+            num_classes = pred.size(1)
+            target_one_hot = torch.zeros_like(pred)
+            # Only create one-hot for valid classes (< num_classes)
+            # Background class (>= num_classes) stays as all-zeros
+            valid_mask = target < num_classes
+            if valid_mask.any():
+                target_one_hot[valid_mask] = F.one_hot(
+                    target[valid_mask], num_classes=num_classes
+                ).to(pred.dtype)  # Match pred dtype (BF16, FP16, or FP32)
+            target = target_one_hot
+
         return py_sigmoid_focal_loss(pred, target, weight, gamma, alpha, reduction, avg_factor)
 
     if weight is not None:
