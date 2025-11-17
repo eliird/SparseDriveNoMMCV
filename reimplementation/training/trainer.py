@@ -136,28 +136,50 @@ class Trainer:
                 img_metas = [img_metas]
 
             # Forward pass
-            with autocast(device_type='cuda', enabled=self.use_fp16):
-                losses = self.get_model().forward_train(
-                    img=batch['img'],
-                    img_metas=img_metas,
-                    gt_bboxes_3d=batch.get('gt_bboxes_3d'),
-                    gt_labels_3d=batch.get('gt_labels_3d'),
-                    gt_map_labels=batch.get('gt_map_labels'),
-                    gt_map_pts=batch.get('gt_map_pts'),
-                    timestamp=batch.get('timestamp'),
-                    projection_mat=batch.get('projection_mat'),
-                    image_wh=batch.get('image_wh'),
-                    gt_depth=batch.get('gt_depth'),
-                    focal=batch.get('focal'),
-                )
+            # with autocast(device_type='cuda', enabled=self.use_fp16):
+            losses = self.get_model().forward_train(
+                img=batch['img'],
+                img_metas=img_metas,
+                gt_bboxes_3d=batch.get('gt_bboxes_3d'),
+                gt_labels_3d=batch.get('gt_labels_3d'),
+                gt_map_labels=batch.get('gt_map_labels'),
+                gt_map_pts=batch.get('gt_map_pts'),
+                timestamp=batch.get('timestamp'),
+                projection_mat=batch.get('projection_mat'),
+                image_wh=batch.get('image_wh'),
+                gt_depth=batch.get('gt_depth'),
+                focal=batch.get('focal'),
+            )
 
             # Calculate total loss
             total_loss = sum([v for k, v in losses.items() if 'loss' in k.lower() and isinstance(v, torch.Tensor)])
+
+            # DEBUG: Check for NaN/Inf in loss
+            if torch.isnan(total_loss) or torch.isinf(total_loss):
+                print(f"[DEBUG] WARNING: Loss is {'NaN' if torch.isnan(total_loss) else 'Inf'} at iter {self.current_iter}")
+                for k, v in losses.items():
+                    if isinstance(v, torch.Tensor):
+                        print(f"  {k}: {v.item():.4f}, nan={torch.isnan(v).any()}, inf={torch.isinf(v).any()}")
 
             # Backward pass
             self.optimizer.zero_grad()
             if self.use_fp16:
                 self.scaler.scale(total_loss).backward()
+
+                # DEBUG: Check gradients every 100 iterations
+                if self.current_iter % 100 == 0:
+                    total_grad_norm = 0.0
+                    num_grads = 0
+                    zero_grads = 0
+                    for p in self.model.parameters():
+                        if p.grad is not None:
+                            param_norm = p.grad.data.norm(2).item()
+                            total_grad_norm += param_norm ** 2
+                            num_grads += 1
+                            if param_norm < 1e-10:
+                                zero_grads += 1
+                    total_grad_norm = total_grad_norm ** 0.5
+                    print(f"[DEBUG] Iter {self.current_iter}: grad_norm={total_grad_norm:.6f}, params_with_grad={num_grads}, zero_grads={zero_grads}, loss_scale={self.scaler.get_scale()}")
 
                 # Gradient clipping
                 if self.max_norm is not None:
@@ -173,6 +195,21 @@ class Trainer:
                 self.scaler.update()
             else:
                 total_loss.backward()
+
+                # DEBUG: Check gradients every 100 iterations
+                if self.current_iter % 100 == 0:
+                    total_grad_norm = 0.0
+                    num_grads = 0
+                    zero_grads = 0
+                    for p in self.model.parameters():
+                        if p.grad is not None:
+                            param_norm = p.grad.data.norm(2).item()
+                            total_grad_norm += param_norm ** 2
+                            num_grads += 1
+                            if param_norm < 1e-10:
+                                zero_grads += 1
+                    total_grad_norm = total_grad_norm ** 0.5
+                    print(f"[DEBUG] Iter {self.current_iter}: grad_norm={total_grad_norm:.6f}, params_with_grad={num_grads}, zero_grads={zero_grads}")
 
                 # Gradient clipping
                 if self.max_norm is not None:

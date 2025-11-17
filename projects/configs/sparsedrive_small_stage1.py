@@ -20,7 +20,7 @@ checkpoint_config = dict(
     interval=num_iters_per_epoch * checkpoint_epoch_interval
 )
 log_config = dict(
-    interval=51,
+    interval=50,  # Log every iteration for quick verification (was 51)
     hooks=[
         dict(type="TextLoggerHook", by_epoch=False),
         dict(type="TensorboardLoggerHook"),
@@ -29,7 +29,7 @@ log_config = dict(
 load_from = None
 resume_from = None
 workflow = [("train", 1)]
-fp16 = dict(loss_scale=32.0)
+fp16 = dict(loss_scale=32.0) # is disabled model always trains in fp32, fp16 loss not converging. (maybe the scale is the issue)
 input_shape = (704, 256)
 
 
@@ -694,7 +694,7 @@ optimizer_config = dict(grad_clip=dict(max_norm=25, norm_type=2))
 lr_config = dict(
     policy="CosineAnnealing",
     warmup="linear",
-    warmup_iters=500,
+    warmup_iters=2000,  # ~1 epoch of warmup (1759 iters/epoch). Was 500 which was only 0.28 epochs.
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3,
 )

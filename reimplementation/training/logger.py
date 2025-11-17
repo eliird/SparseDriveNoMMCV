@@ -19,7 +19,7 @@ class Logger:
         rank: Process rank in distributed training (default: 0)
     """
 
-    def __init__(self, log_dir: str, log_interval: int = 50, rank: int = 0):
+    def __init__(self, log_dir: str, log_interval: int = 1, rank: int = 0):
         self.log_dir = log_dir
         self.log_interval = log_interval
         self.rank = rank

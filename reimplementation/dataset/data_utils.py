@@ -278,7 +278,7 @@ def bgr2hsv(img: np.ndarray) -> np.ndarray:
     """Convert a BGR image to HSV color space.
 
     Args:
-        img (np.ndarray): BGR image array
+        img (np.ndarray): BGR image array (in [0, 255] range for both uint8 and float32)
 
     Returns:
         np.ndarray: HSV image array with H in [0, 360), S in [0, 1], V in [0, 1]
@@ -288,7 +288,7 @@ def bgr2hsv(img: np.ndarray) -> np.ndarray:
 
     # cv2.cvtColor expects uint8 or float32
     # HSV output: H in [0, 180), S in [0, 255], V in [0, 255] for uint8
-    # HSV output: H in [0, 360), S in [0, 1], V in [0, 1] for float32
+    # HSV output: H in [0, 360), S in [0, 1], V in [0, 1] for float32 IN [0, 1] RANGE
 
     if img.dtype == np.uint8:
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -298,11 +298,14 @@ def bgr2hsv(img: np.ndarray) -> np.ndarray:
         hsv[..., 1] = hsv[..., 1] / 255.0  # S: [0, 255] -> [0, 1]
         hsv[..., 2] = hsv[..., 2] / 255.0  # V: [0, 255] -> [0, 1]
     elif img.dtype == np.float32:
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        # cv2 already outputs H in [0, 360), S in [0, 1], V in [0, 1] for float32
+        # BUG FIX: cv2 expects float32 images in [0, 1] range, but ours are in [0, 255]!
+        # We need to scale to [0, 1] first
+        img_scaled = img / 255.0
+        hsv = cv2.cvtColor(img_scaled, cv2.COLOR_BGR2HSV)
+        # cv2 outputs H in [0, 360), S in [0, 1], V in [0, 1] for float32
     else:
-        # Convert to float32 first
-        img_float = img.astype(np.float32)
+        # Convert to float32 first, then scale
+        img_float = img.astype(np.float32) / 255.0
         hsv = cv2.cvtColor(img_float, cv2.COLOR_BGR2HSV)
 
     return hsv
@@ -315,7 +318,7 @@ def hsv2bgr(img: np.ndarray) -> np.ndarray:
         img (np.ndarray): HSV image array with H in [0, 360), S in [0, 1], V in [0, 1]
 
     Returns:
-        np.ndarray: BGR image array
+        np.ndarray: BGR image array in [0, 255] range as float32
     """
     if not CV2_AVAILABLE:
         raise ImportError('cv2 is required for HSV to BGR conversion')
@@ -327,6 +330,10 @@ def hsv2bgr(img: np.ndarray) -> np.ndarray:
         img = img.astype(np.float32)
 
     bgr = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
+
+    # BUG FIX: cv2 outputs BGR in [0, 1] range for float32 input
+    # Scale back to [0, 255] to match the expected range
+    bgr = bgr * 255.0
 
     return bgr
 

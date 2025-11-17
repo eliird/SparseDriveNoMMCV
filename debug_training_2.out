@@ -1,0 +1,505 @@
+Use flash_attn_varlen_kvpacked_func
+================================================================================
+TRAINING DEBUG - COMPREHENSIVE DIAGNOSTIC
+================================================================================
+
+Device: cuda
+
+1. Loading config...
+   ✓ Config loaded
+
+2. Building model...
+Loading ResNet50 pretrained weights from torchvision...
+✓ Successfully loaded ResNet50 pretrained weights from torchvision
+   ✓ Model built: 75,675,879 total params, 75,445,353 trainable
+
+3. Building dataset...
+{'version': 'v1.0-trainval'}
+   ✓ Dataset: 28130 samples, 28130 batches
+
+4. Building optimizer...
+  - img_backbone: 159 params, lr=0.000200, weight_decay=0.001000
+  - default: 853 params, lr=0.000400, weight_decay=0.001000
+   ✓ Optimizer: AdamW
+     Base LR: 0.0004
+
+================================================================================
+5. RUNNING MINI TRAINING LOOP (10 iterations)
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+Iteration 0
+────────────────────────────────────────────────────────────────────────────────
+
+📊 Batch data:
+   Image shape: torch.Size([1, 6, 3, 256, 704])
+   Image mean: 0.0487, std: 1.2171
+   Unique batches so far: 1/1
+   GT labels: [9]
+
+⚡ Forward pass...
+   Loss components:
+     det_loss_cls_0: 307.1008
+     det_loss_box_0: 2.6744
+     det_loss_cns_0: 0.6752
+     det_loss_yns_0: 0.0957
+     det_loss_cls_1: 374.0170
+     det_loss_box_1: 3.5226
+     det_loss_cns_1: 0.6079
+     det_loss_yns_1: 0.1434
+     det_loss_cls_2: 300.0640
+     det_loss_box_2: 4.0099
+     det_loss_cns_2: 0.8598
+     det_loss_yns_2: 0.1658
+     det_loss_cls_3: 343.3437
+     det_loss_box_3: 3.5528
+     det_loss_cns_3: 0.6493
+     det_loss_yns_3: 0.2631
+     det_loss_cls_4: 247.9931
+     det_loss_box_4: 4.3046
+     det_loss_cns_4: 0.7801
+     det_loss_yns_4: 0.1804
+     det_loss_cls_5: 272.0382
+     det_loss_box_5: 4.5990
+     det_loss_cns_5: 0.6759
+     det_loss_yns_5: 0.2775
+     map_loss_cls_0: 7.5140
+     map_loss_line_0: 1.5225
+     map_loss_cls_1: 9.1770
+     map_loss_line_1: 1.5959
+     map_loss_cls_2: 7.1200
+     map_loss_line_2: 1.6161
+     map_loss_cls_3: 3.6273
+     map_loss_line_3: 1.6796
+     map_loss_cls_4: 7.7266
+     map_loss_line_4: 1.6725
+     map_loss_cls_5: 11.9871
+     map_loss_line_5: 1.6882
+     loss_dense_depth: 1.2172
+   Total loss: 1930.7384
+
+⚡ Backward pass...
+   ✓ Backward complete
+
+📈 Gradient statistics:
+   Params with gradients: 1012/1012
+   Global grad norm: 269250.621767
+   Zero gradients: 101
+   None gradients: 0
+   NaN gradients: 0
+   Inf gradients: 0
+
+   Top layers by gradient norm:
+     head: norm=268758.555617, params=831, with_grad=831
+     img_backbone: norm=11900.876789, params=159, with_grad=159
+     img_neck: norm=11095.279865, params=16, with_grad=16
+     depth_branch: norm=0.922739, params=6, with_grad=6
+
+⚡ Optimizer step...
+   Learning rate: 2.000000e-04
+   ✓ Step complete
+
+🔄 Parameter update statistics:
+   Updated params: 988/1012
+   Max change: 4.272461e-04
+   Mean change: 3.230831e-04
+
+────────────────────────────────────────────────────────────────────────────────
+Iteration 1
+────────────────────────────────────────────────────────────────────────────────
+
+📊 Batch data:
+   Image shape: torch.Size([1, 6, 3, 256, 704])
+   Image mean: -0.7699, std: 0.8063
+   Unique batches so far: 2/2
+   GT labels: [40]
+
+⚡ Forward pass...
+   Loss components:
+     det_loss_cls_0: 19.6429
+     det_loss_box_0: 3.0207
+     det_loss_cns_0: 0.6747
+     det_loss_yns_0: 0.2590
+     det_loss_cls_1: 23.3721
+     det_loss_box_1: 4.1236
+     det_loss_cns_1: 0.5840
+     det_loss_yns_1: 0.2587
+     det_loss_cls_2: 13.8264
+     det_loss_box_2: 4.7676
+     det_loss_cns_2: 0.6075
+     det_loss_yns_2: 0.1842
+     det_loss_cls_3: 23.5461
+     det_loss_box_3: 5.5320
+     det_loss_cns_3: 0.6415
+     det_loss_yns_3: 0.2369
+     det_loss_cls_4: 13.3319
+     det_loss_box_4: 5.8027
+     det_loss_cns_4: 0.6465
+     det_loss_yns_4: 0.2084
+     det_loss_cls_5: 12.2868
+     det_loss_box_5: 6.2918
+     det_loss_cns_5: 0.5666
+     det_loss_yns_5: 0.2716
+     map_loss_cls_0: 1.2159
+     map_loss_line_0: 1.3294
+     map_loss_cls_1: 0.9285
+     map_loss_line_1: 1.3520
+     map_loss_cls_2: 0.8558
+     map_loss_line_2: 1.3320
+     map_loss_cls_3: 2.0214
+     map_loss_line_3: 1.3966
+     map_loss_cls_4: 0.8911
+     map_loss_line_4: 1.4191
+     map_loss_cls_5: 4.4152
+     map_loss_line_5: 1.4075
+     loss_dense_depth: 1.5686
+   Total loss: 160.8174
+
+⚡ Backward pass...
+   ✓ Backward complete
+
+📈 Gradient statistics:
+   Params with gradients: 1012/1012
+   Global grad norm: 2025.393039
+   Zero gradients: 1
+   None gradients: 0
+   NaN gradients: 0
+   Inf gradients: 0
+
+   Top layers by gradient norm:
+     head: norm=1998.155795, params=831, with_grad=831
+     img_neck: norm=307.884826, params=16, with_grad=16
+     img_backbone: norm=121.636419, params=159, with_grad=159
+     depth_branch: norm=1.378416, params=6, with_grad=6
+
+⚡ Optimizer step...
+   Learning rate: 2.000000e-04
+   ✓ Step complete
+
+🔄 Parameter update statistics:
+   Updated params: 1012/1012
+   Max change: 4.119873e-04
+   Mean change: 2.443753e-04
+
+────────────────────────────────────────────────────────────────────────────────
+Iteration 2
+────────────────────────────────────────────────────────────────────────────────
+
+📊 Batch data:
+   Image shape: torch.Size([1, 6, 3, 256, 704])
+   Image mean: -1.7792, std: 0.3135
+   Unique batches so far: 3/3
+   GT labels: [1]
+
+⚡ Forward pass...
+   Loss components:
+     det_loss_cls_0: 212.5505
+     det_loss_box_0: 3.6077
+     det_loss_cns_0: 0.5795
+     det_loss_yns_0: 0.3443
+     det_loss_cls_1: 354.3074
+     det_loss_box_1: 4.2105
+     det_loss_cns_1: 0.5863
+     det_loss_yns_1: 0.0263
+     det_loss_cls_2: 196.7584
+     det_loss_box_2: 4.9313
+     det_loss_cns_2: 0.5898
+     det_loss_yns_2: 0.3490
+     det_loss_cls_3: 259.6824
+     det_loss_box_3: 5.6200
+     det_loss_cns_3: 0.7777
+     det_loss_yns_3: 0.7232
+     det_loss_cls_4: 146.3661
+     det_loss_box_4: 6.9050
+     det_loss_cns_4: 0.6242
+     det_loss_yns_4: 0.0949
+     det_loss_cls_5: 216.7075
+     det_loss_box_5: 6.1505
+     det_loss_cns_5: 0.4426
+     det_loss_yns_5: 0.1694
+     map_loss_cls_0: 0.8009
+     map_loss_line_0: 1.2415
+     map_loss_cls_1: 0.5536
+     map_loss_line_1: 1.2590
+     map_loss_cls_2: 0.5140
+     map_loss_line_2: 1.2585
+     map_loss_cls_3: 0.6772
+     map_loss_line_3: 1.2671
+     map_loss_cls_4: 0.5468
+     map_loss_line_4: 1.2797
+     map_loss_cls_5: 6.1748
+     map_loss_line_5: 1.3164
+     loss_dense_depth: 1.1121
+   Total loss: 1441.1058
+
+⚡ Backward pass...
+   ✓ Backward complete
+
+📈 Gradient statistics:
+   Params with gradients: 1012/1012
+   Global grad norm: 13394.244991
+   Zero gradients: 1
+   None gradients: 0
+   NaN gradients: 0
+   Inf gradients: 0
+
+   Top layers by gradient norm:
+     head: norm=13248.264451, params=831, with_grad=831
+     img_neck: norm=1830.960737, params=16, with_grad=16
+     img_backbone: norm=732.708516, params=159, with_grad=159
+     depth_branch: norm=2.987130, params=6, with_grad=6
+
+⚡ Optimizer step...
+   Learning rate: 2.000000e-04
+   ✓ Step complete
+
+🔄 Parameter update statistics:
+   Updated params: 1012/1012
+   Max change: 4.017949e-04
+   Mean change: 1.942329e-04
+
+────────────────────────────────────────────────────────────────────────────────
+Iteration 3
+────────────────────────────────────────────────────────────────────────────────
+
+📊 Batch data:
+   Image shape: torch.Size([1, 6, 3, 256, 704])
+   Image mean: -0.7917, std: 0.6950
+   Unique batches so far: 4/4
+   GT labels: [8]
+
+⚡ Forward pass...
+   Loss components:
+     det_loss_cls_0: 7.8445
+     det_loss_box_0: 3.2885
+     det_loss_cns_0: 0.6092
+     det_loss_yns_0: 0.2861
+     det_loss_cls_1: 22.6702
+     det_loss_box_1: 4.8096
+     det_loss_cns_1: 0.6321
+     det_loss_yns_1: 0.3708
+     det_loss_cls_2: 8.6486
+     det_loss_box_2: 5.9355
+     det_loss_cns_2: 0.5871
+     det_loss_yns_2: 0.2122
+     det_loss_cls_3: 12.5136
+     det_loss_box_3: 6.8117
+     det_loss_cns_3: 0.6021
+     det_loss_yns_3: 0.4023
+     det_loss_cls_4: 6.0590
+     det_loss_box_4: 7.4647
+     det_loss_cns_4: 0.5871
+     det_loss_yns_4: 0.2380
+     det_loss_cls_5: 10.8099
+     det_loss_box_5: 7.2516
+     det_loss_cns_5: 0.3929
+     det_loss_yns_5: 0.1604
+     map_loss_cls_0: 0.3960
+     map_loss_line_0: 1.2068
+     map_loss_cls_1: 0.4292
+     map_loss_line_1: 1.2048
+     map_loss_cls_2: 0.4429
+     map_loss_line_2: 1.2184
+     map_loss_cls_3: 0.4133
+     map_loss_line_3: 1.2249
+     map_loss_cls_4: 0.4634
+     map_loss_line_4: 1.2720
+     map_loss_cls_5: 0.4635
+     map_loss_line_5: 1.3327
+     loss_dense_depth: 1.5446
+   Total loss: 120.8002
+
+⚡ Backward pass...
+   ✓ Backward complete
+
+📈 Gradient statistics:
+   Params with gradients: 1012/1012
+   Global grad norm: 792.268859
+   Zero gradients: 1
+   None gradients: 0
+   NaN gradients: 0
+   Inf gradients: 0
+
+   Top layers by gradient norm:
+     head: norm=789.539066, params=831, with_grad=831
+     img_neck: norm=60.573031, params=16, with_grad=16
+     img_backbone: norm=25.036793, params=159, with_grad=159
+     depth_branch: norm=4.698414, params=6, with_grad=6
+
+⚡ Optimizer step...
+   Learning rate: 2.000000e-04
+   ✓ Step complete
+
+🔄 Parameter update statistics:
+   Updated params: 1012/1012
+   Max change: 4.026722e-04
+   Mean change: 1.583834e-04
+
+────────────────────────────────────────────────────────────────────────────────
+Iteration 4
+────────────────────────────────────────────────────────────────────────────────
+
+📊 Batch data:
+   Image shape: torch.Size([1, 6, 3, 256, 704])
+   Image mean: -0.0222, std: 1.1993
+   Unique batches so far: 5/5
+   GT labels: [14]
+
+⚡ Forward pass...
+   Loss components:
+     det_loss_cls_0: 4.2185
+     det_loss_box_0: 5.0212
+     det_loss_cns_0: 0.5867
+     det_loss_yns_0: 0.2179
+     det_loss_cls_1: 8.5218
+     det_loss_box_1: 7.2172
+     det_loss_cns_1: 0.5260
+     det_loss_yns_1: 0.2998
+     det_loss_cls_2: 4.3845
+     det_loss_box_2: 7.7821
+     det_loss_cns_2: 0.7334
+     det_loss_yns_2: 0.2086
+     det_loss_cls_3: 5.0056
+     det_loss_box_3: 8.3551
+     det_loss_cns_3: 0.5882
+     det_loss_yns_3: 0.2046
+     det_loss_cls_4: 3.0938
+     det_loss_box_4: 8.3707
+     det_loss_cns_4: 0.6292
+     det_loss_yns_4: 0.1753
+     det_loss_cls_5: 5.3802
+     det_loss_box_5: 6.8286
+     det_loss_cns_5: 0.8005
+     det_loss_yns_5: 0.1994
+     map_loss_cls_0: 0.4390
+     map_loss_line_0: 1.2567
+     map_loss_cls_1: 0.4537
+     map_loss_line_1: 1.2630
+     map_loss_cls_2: 0.4574
+     map_loss_line_2: 1.2887
+     map_loss_cls_3: 0.4651
+     map_loss_line_3: 1.3367
+     map_loss_cls_4: 0.4353
+     map_loss_line_4: 1.3587
+     map_loss_cls_5: 0.4590
+     map_loss_line_5: 1.4110
+     loss_dense_depth: 2.0055
+   Total loss: 91.9789
+
+⚡ Backward pass...
+   ✓ Backward complete
+
+📈 Gradient statistics:
+   Params with gradients: 1012/1012
+   Global grad norm: 341.039986
+   Zero gradients: 1
+   None gradients: 0
+   NaN gradients: 0
+   Inf gradients: 0
+
+   Top layers by gradient norm:
+     head: norm=339.944552, params=831, with_grad=831
+     img_neck: norm=24.419860, params=16, with_grad=16
+     img_backbone: norm=11.514613, params=159, with_grad=159
+     depth_branch: norm=4.130137, params=6, with_grad=6
+
+⚡ Optimizer step...
+   Learning rate: 2.000000e-04
+   ✓ Step complete
+
+🔄 Parameter update statistics:
+   Updated params: 1012/1012
+   Max change: 4.040510e-04
+   Mean change: 1.333928e-04
+
+────────────────────────────────────────────────────────────────────────────────
+Iteration 5
+────────────────────────────────────────────────────────────────────────────────
+
+📊 Batch data:
+   Image shape: torch.Size([1, 6, 3, 256, 704])
+   Image mean: -0.4966, std: 1.0259
+   Unique batches so far: 6/6
+   GT labels: [38]
+
+⚡ Forward pass...
+   Loss components:
+     det_loss_cls_0: 2.0279
+     det_loss_box_0: 3.5297
+     det_loss_cns_0: 0.5744
+     det_loss_yns_0: 0.1661
+     det_loss_cls_1: 2.5957
+     det_loss_box_1: 5.6321
+     det_loss_cns_1: 0.5073
+     det_loss_yns_1: 0.2914
+     det_loss_cls_2: 1.9429
+     det_loss_box_2: 6.7131
+     det_loss_cns_2: 0.5407
+     det_loss_yns_2: 0.1946
+     det_loss_cls_3: 1.9541
+     det_loss_box_3: 7.6170
+     det_loss_cns_3: 0.5161
+     det_loss_yns_3: 0.1893
+     det_loss_cls_4: 1.6894
+     det_loss_box_4: 7.8114
+     det_loss_cns_4: 0.5526
+     det_loss_yns_4: 0.1927
+     det_loss_cls_5: 2.2312
+     det_loss_box_5: 5.6871
+     det_loss_cns_5: 0.7811
+     det_loss_yns_5: 0.1723
+     map_loss_cls_0: 0.4911
+     map_loss_line_0: 1.2237
+     map_loss_cls_1: 0.4824
+     map_loss_line_1: 1.2664
+     map_loss_cls_2: 0.5073
+     map_loss_line_2: 1.2644
+     map_loss_cls_3: 0.5520
+     map_loss_line_3: 1.2650
+     map_loss_cls_4: 0.4809
+     map_loss_line_4: 1.2845
+     map_loss_cls_5: 0.6487
+     map_loss_line_5: 1.2844
+     loss_dense_depth: 1.5032
+   Total loss: 66.3642
+
+⚡ Backward pass...
+   ✓ Backward complete
+
+📈 Gradient statistics:
+   Params with gradients: 1012/1012
+   Global grad norm: 247.227138
+   Zero gradients: 1
+   None gradients: 0
+   NaN gradients: 0
+   Inf gradients: 0
+
+   Top layers by gradient norm:
+     head: norm=246.506609, params=831, with_grad=831
+     img_neck: norm=17.250358, params=16, with_grad=16
+     img_backbone: norm=5.643408, params=159, with_grad=159
+     depth_branch: norm=5.130961, params=6, with_grad=6
+
+⚡ Optimizer step...
+   Learning rate: 2.000000e-04
+   ✓ Step complete
+
+🔄 Parameter update statistics:
+   Updated params: 1012/1012
+   Max change: 4.052427e-04
+   Mean change: 1.164014e-04
+
+────────────────────────────────────────────────────────────────────────────────
+Iteration 6
+────────────────────────────────────────────────────────────────────────────────
+
+📊 Batch data:
+   Image shape: torch.Size([1, 6, 3, 256, 704])
+   Image mean: -0.2565, std: 0.9170
+   Unique batches so far: 7/7
+   GT labels: [11]
+
+⚡ Forward pass...
+   Loss components:
+     det_loss_cls_0: 4.2127
+     det_loss_box_0: 4.3102

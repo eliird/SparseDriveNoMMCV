@@ -39,14 +39,18 @@ python tools/kmeans/kmeans_motion.py
 
 ```sh
 # 1 GPU
-python train.py --config projects/configs/sparsedrive_small_stage1.py --work-dir work_dirs/test
+python train.py --config projects/configs/sparsedrive_small_stage1.py --work-dir work_dirs/test | tee out.log
 
 # MultiGPU
 python -m torch.distributed.launch --nproc_per_node=8 train.py \
     --config projects/configs/sparsedrive_small_stage1.py \
     --work-dir work_dirs/sparsedrive_small \
-    --launcher pytorch
-================================================================================
+    --launcher pytorch | tee out.log
+
+# visualize the losses from out.log file
+python visualize_loss.py
+
+# should generate <loss_visualization.png>
 ```
 
 # Original README: SparseDrive: End-to-End Autonomous Driving via Sparse Scene Representation

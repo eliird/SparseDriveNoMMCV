@@ -290,8 +290,7 @@ class ResNet(nn.Module):
             if pretrained.lower() == 'torchvision':
                 try:
                     import torchvision.models as models
-                    logger = logging.getLogger()
-                    logger.info(f"Loading ResNet{self.depth} pretrained weights from torchvision")
+                    print(f"Loading ResNet{self.depth} pretrained weights from torchvision...")
 
                     # Load torchvision pretrained model
                     if hasattr(models, f'ResNet{self.depth}_Weights'):
@@ -309,10 +308,10 @@ class ResNet(nn.Module):
                                      if k in model_dict and not k.startswith('fc')}
                     model_dict.update(pretrained_dict)
                     self.load_state_dict(model_dict)
-                    logger.info("Successfully loaded torchvision pretrained weights")
+                    print(f"✓ Successfully loaded ResNet{self.depth} pretrained weights from torchvision")
                 except Exception as e:
-                    logger = logging.getLogger()
-                    logger.warning(f"Failed to load from torchvision: {e}. Using random initialization.")
+                    print(f"✗ Failed to load from torchvision: {e}")
+                    print(f"  Using random initialization instead.")
                     for m in self.modules():
                         if isinstance(m, nn.Conv2d):
                             kaiming_init(m)

@@ -232,9 +232,18 @@ class FocalLoss(nn.Module):
             if torch.cuda.is_available() and pred.is_cuda:
                 calculate_loss_func = sigmoid_focal_loss
             else:
+                # BUG FIX: Correctly handle background class (target >= num_classes)
+                # Background queries should not be positive for any class, not all-zeros
                 num_classes = pred.size(1)
-                target = F.one_hot(target, num_classes=num_classes + 1)
-                target = target[:, :num_classes]
+                target_one_hot = torch.zeros_like(pred)
+                # Only create one-hot for valid classes (< num_classes)
+                # Background class (>= num_classes) stays as all-zeros, which is correct
+                valid_mask = target < num_classes
+                if valid_mask.any():
+                    target_one_hot[valid_mask] = F.one_hot(
+                        target[valid_mask], num_classes=num_classes
+                    ).float()
+                target = target_one_hot
                 calculate_loss_func = py_sigmoid_focal_loss
 
             loss_cls = self.loss_weight * calculate_loss_func(
