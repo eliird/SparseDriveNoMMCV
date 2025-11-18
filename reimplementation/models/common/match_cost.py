@@ -75,6 +75,9 @@ class FocalLossCost(BaseMatchCost):
             torch.Tensor: cls_cost value with weight
         """
         cls_pred = cls_pred.sigmoid()
+        # Clamp to prevent numerical instability
+        cls_pred = cls_pred.clamp(min=self.eps, max=1 - self.eps)
+
         neg_cost = -(1 - cls_pred + self.eps).log() * (
             1 - self.alpha) * cls_pred.pow(self.gamma)
         pos_cost = -(cls_pred + self.eps).log() * self.alpha * (
@@ -122,7 +125,7 @@ class LinesL1Cost(object):
             lines_pred = lines_pred.unsqueeze(1).repeat(1, len(gt_lines), 1)
             gt_lines = gt_lines.unsqueeze(0).repeat(num_pred, 1, 1)
             dist_mat = smooth_l1_loss(lines_pred, gt_lines, reduction='none', beta=self.beta).sum(-1)
-        
+
         else:
             dist_mat = torch.cdist(lines_pred, gt_lines, p=1)
 
@@ -133,7 +136,7 @@ class LinesL1Cost(object):
             dist_mat = dist_mat.view(num_pred, num_gt, -1) # (num_pred, num_gt, num_permute)
             dist_mat, gt_permute_index = torch.min(dist_mat, 2)
             return dist_mat * self.weight, gt_permute_index
-        
+
         return dist_mat * self.weight
 
 class MapQueriesCost(object):
@@ -175,7 +178,7 @@ class MapQueriesCost(object):
         if self.iou_cost is not None:
             iou_cost = self.iou_cost(preds['lines'],gts['lines'])
             cost += iou_cost
-        
+
         if self.reg_cost.permute:
             return cost, gt_permute_idx
         return cost

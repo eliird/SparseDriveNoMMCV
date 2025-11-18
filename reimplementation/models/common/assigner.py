@@ -244,6 +244,11 @@ class HungarianLinesAssigner(BaseAssigner):
         else:
             cost = self.cost(preds, gts, ignore_cls_cost)
 
+        # Safety check: replace any NaN/Inf with large finite value
+        # This handles numerical instability that can occur during training
+        if not torch.isfinite(cost).all():
+            cost = torch.where(torch.isfinite(cost), cost, torch.full_like(cost, 1e6))
+
         # do Hungarian matching on CPU using linear_sum_assignment
         cost = cost.detach().cpu().numpy()
         matched_row_inds, matched_col_inds = linear_sum_assignment(cost)

@@ -35,7 +35,7 @@ fp16 = None  # Legacy FP16 config (use 'precision' instead)
 # - fp32: Standard floating point (slowest, most stable)
 # - fp16: Half precision with gradient scaling (fastest, needs tuning)
 # - bf16: BFloat16 (fast, good for large losses, no scaling needed)
-precision = 'bf16'  # Recommended for SparseDrive (handles large losses well)
+precision = 'fp32'  # Recommended for SparseDrive (handles large losses well)
 
 # Model compilation settings (PyTorch 2.0+)
 # Note: Custom CUDA ops may not be compatible with compilation
@@ -710,7 +710,7 @@ optimizer_config = dict(grad_clip=dict(max_norm=25, norm_type=2))
 lr_config = dict(
     policy="CosineAnnealing",
     warmup="linear",
-    warmup_iters=2000,  # ~1 epoch of warmup (1759 iters/epoch). Was 500 which was only 0.28 epochs.
+    warmup_iters=500,  # ~1 epoch of warmup (1759 iters/epoch). Was 500 which was only 0.28 epochs.
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3,
 )
