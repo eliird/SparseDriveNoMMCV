@@ -3,6 +3,7 @@
 Script to visualize training loss from out.log
 """
 import re
+import sys
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -87,7 +88,8 @@ def plot_loss(iterations, losses, save_path='loss_plot.png'):
     print("="*60)
 
 def main():
-    log_file = 'out.log'
+    
+    log_file = sys.argv[1] if len(sys.argv) > 1 else 'out.log'
     output_file = 'loss_visualization.png'
 
     print(f"Parsing loss values from {log_file}...")

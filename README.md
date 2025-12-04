@@ -33,6 +33,10 @@ python tools/kmeans/kmeans_map.py
 python tools/kmeans/kmeans_det.py
 python tools/kmeans/kmeans_plan.py
 python tools/kmeans/kmeans_motion.py
+
+# split train val
+# default split generates a val split which is empty we can generate val split from training using
+python tools/split_train_val.py
 ```
 
 ## Run the Training Script

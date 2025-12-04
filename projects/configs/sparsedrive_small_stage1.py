@@ -35,7 +35,7 @@ fp16 = None  # Legacy FP16 config (use 'precision' instead)
 # - fp32: Standard floating point (slowest, most stable)
 # - fp16: Half precision with gradient scaling (fastest, needs tuning)
 # - bf16: BFloat16 (fast, good for large losses, no scaling needed)
-precision = 'fp32'  # Recommended for SparseDrive (handles large losses well)
+precision = 'bf16'  # Recommended for SparseDrive (handles large losses well)
 
 # Model compilation settings (PyTorch 2.0+)
 # Note: Custom CUDA ops may not be compatible with compilation
@@ -698,7 +698,7 @@ data = dict(
 # ================== training ========================
 optimizer = dict(
     type="AdamW",
-    lr=8e-4,
+    lr=4e-4,
     weight_decay=0.001,
     paramwise_cfg=dict(
         custom_keys={
