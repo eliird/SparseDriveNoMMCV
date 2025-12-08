@@ -4,6 +4,8 @@
 *.whl
 *.swp
 
+.venv
+data
 data/
 ckpt/
 work_dirs*/
@@ -12,6 +14,7 @@ vis/
 val/
 lib/
 
+*.egg
 *.egg-info
 build/
 __pycache__/
