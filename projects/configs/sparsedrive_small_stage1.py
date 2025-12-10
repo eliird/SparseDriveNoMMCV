@@ -39,7 +39,7 @@ precision = 'bf16'  # Recommended for SparseDrive (handles large losses well)
 
 # Model compilation settings (PyTorch 2.0+)
 # Note: Custom CUDA ops may not be compatible with compilation
-compile_model = True  # Set to True to try torch.compile (experimental)
+compile_model = False  # Set to True to try torch.compile (experimental)
 compile_config = dict(
     mode='reduce-overhead',  # 'default', 'reduce-overhead', 'max-autotune'
     fullgraph=False,  # Allow graph breaks for custom ops
