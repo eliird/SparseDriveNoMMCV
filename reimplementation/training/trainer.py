@@ -160,7 +160,7 @@ class Trainer:
             # Forward pass with mixed precision
             amp_dtype = torch.bfloat16 if self.use_bf16 else torch.float16
             with autocast(device_type='cuda', enabled=self.use_amp, dtype=amp_dtype):
-                losses = self.get_model().forward_train(
+                losses = self.model(
                     img=batch['img'],
                     img_metas=img_metas,
                     gt_bboxes_3d=batch.get('gt_bboxes_3d'),

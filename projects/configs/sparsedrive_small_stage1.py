@@ -9,16 +9,9 @@ dist_params = dict(backend="nccl")
 log_level = "INFO"
 work_dir = None
 
-total_batch_size =16 
-num_gpus = 2 
-batch_size = total_batch_size // num_gpus
-num_iters_per_epoch = int(length[version] // (num_gpus * batch_size))
+batch_size = 2  # per GPU batch size
 num_epochs = 6
 checkpoint_epoch_interval = 20
-
-checkpoint_config = dict(
-    interval=num_iters_per_epoch * checkpoint_epoch_interval
-)
 log_config = dict(
     interval=5,  # Log every iteration for quick verification (was 51)
     hooks=[
@@ -714,11 +707,6 @@ lr_config = dict(
     warmup_ratio=1.0 / 3,
     min_lr_ratio=1e-3,
 )
-runner = dict(
-    type="IterBasedRunner",
-    max_iters=num_iters_per_epoch * num_epochs,
-)
-
 # ================== eval ========================
 eval_mode = dict(
     with_det=True,
@@ -728,8 +716,4 @@ eval_mode = dict(
     with_planning=False,
     tracking_threshold=0.2,
     motion_threshhold=0.2,
-)
-evaluation = dict(
-    interval=num_iters_per_epoch*checkpoint_epoch_interval,
-    eval_mode=eval_mode,
 )

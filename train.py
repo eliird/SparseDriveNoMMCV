@@ -234,13 +234,10 @@ def main():
     optimizer = build_optimizer(model, cfg.optimizer)
 
     # Calculate total iterations
+    # Use actual dataloader length (auto-detects GPU count) instead of config value
     num_iters_per_epoch = len(train_loader)
-    if hasattr(cfg, 'runner') and 'max_iters' in cfg.runner:
-        max_iters = cfg.runner['max_iters']
-        max_epochs = max_iters // num_iters_per_epoch
-    else:
-        max_epochs = getattr(cfg, 'num_epochs', 100)
-        max_iters = max_epochs * num_iters_per_epoch
+    max_epochs = getattr(cfg, 'num_epochs', 100)
+    max_iters = max_epochs * num_iters_per_epoch
 
     if rank == 0:
         print(f"\nTraining schedule:")
